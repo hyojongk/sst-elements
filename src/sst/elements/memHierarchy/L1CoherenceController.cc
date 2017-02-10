@@ -250,7 +250,7 @@ CacheAction L1CoherenceController::handleGetSRequest(MemEvent* event, CacheLine*
             if (!shouldRespond) return DONE;
             if (event->isLoadLink()) cacheLine->atomicStart();
             sendTime = sendResponseUp(event, S, data, replay, cacheLine->getTimestamp());
-            cacheLine->setTimestamp(sendTime-1);
+            cacheLine->setTimestamp(sendTime);
             return DONE;
         default:
             debug->fatal(CALL_INFO,-1,"%s, Error: Handling a GetS request but coherence state is not valid and stable. Addr = 0x%" PRIx64 ", Cmd = %s, Src = %s, State = %s. Time = %" PRIu64 "ns\n",
@@ -311,7 +311,7 @@ CacheAction L1CoherenceController::handleGetXRequest(MemEvent* event, CacheLine*
             
             if (event->isStoreConditional()) sendTime = sendResponseUp(event, M, data, replay, cacheLine->getTimestamp(), cacheLine->isAtomic());
             else sendTime = sendResponseUp(event, M, data, replay, cacheLine->getTimestamp());
-            cacheLine->setTimestamp(sendTime-1);
+            cacheLine->setTimestamp(sendTime);
 
             notifyListenerOfAccess(event, NotifyAccessType::WRITE, NotifyResultType::HIT);
             return DONE;
@@ -399,7 +399,7 @@ void L1CoherenceController::handleDataResponse(MemEvent* responseEvent, CacheLin
             if (!shouldRespond) break;
             if (origRequest->isLoadLink()) cacheLine->atomicStart();
             sendTime = sendResponseUp(origRequest, S, cacheLine->getData(), true, cacheLine->getTimestamp());
-            cacheLine->setTimestamp(sendTime-1);
+            cacheLine->setTimestamp(sendTime);
             break;
         case IM:
             cacheLine->setData(responseEvent->getPayload(), responseEvent);
@@ -432,7 +432,7 @@ void L1CoherenceController::handleDataResponse(MemEvent* responseEvent, CacheLin
             
             if (origRequest->isStoreConditional()) sendTime = sendResponseUp(origRequest, M, cacheLine->getData(), true, cacheLine->getTimestamp(), cacheLine->isAtomic());
             else sendTime = sendResponseUp(origRequest, M, cacheLine->getData(), true, cacheLine->getTimestamp());
-            cacheLine->setTimestamp(sendTime-1);
+            cacheLine->setTimestamp(sendTime);
             
             notifyListenerOfAccess(origRequest, NotifyAccessType::WRITE, NotifyResultType::HIT);
             break;
@@ -675,7 +675,7 @@ uint64_t L1CoherenceController::sendResponseUp(MemEvent * event, State grantedSt
 
     // Compute latency, accounting for serialization of requests to the address
     if (baseTime < timestamp_) baseTime = timestamp_;
-    uint64_t deliveryTime = baseTime + (replay ? mshrLatency_ : accessLatency_);
+    uint64_t deliveryTime = baseTime + accessLatency_;
     Response resp = {responseEvent, deliveryTime, packetHeaderBytes + responseEvent->getPayloadSize()};
     addToOutgoingQueueUp(resp);
     

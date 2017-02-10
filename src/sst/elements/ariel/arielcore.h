@@ -115,7 +115,8 @@ class ArielCore {
 		const uint32_t perform_checks;
 		bool enableTracing;
 		uint64_t currentCycles;
-
+                uint32_t readThisCycle;
+                uint32_t writeThisCycle;
 		ArielTraceGenerator* traceGen;
 
 		Statistic<uint64_t>* statReadRequests;

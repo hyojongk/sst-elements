@@ -39,6 +39,9 @@ ArielCore::ArielCore(ArielTunnel *tunnel, SimpleMem* coreToCacheLink,
 	owner = own;
 	memmgr = memMgr;
 
+        readThisCycle = 0;
+        writeThisCycle = 0;
+
 	coreQ = new std::queue<ArielEvent*>();
 	pendingTransactions = new std::unordered_map<SimpleMem::Request::id_t, SimpleMem::Request*>();
 	pending_transaction_count = 0;
@@ -146,8 +149,11 @@ void ArielCore::commitWriteEvent(const uint64_t address,
 	if(length > 0) {
         	SimpleMem::Request *req = new SimpleMem::Request(SimpleMem::Request::Write, address, length);
 		req->setVirtualAddress(virtAddress);
-
-	        // TODO BJM:  DO we need to fill in dummy data?
+                
+                // Fill in dummy data
+                std::vector<uint8_t> data;
+                data.resize(length, 0);
+                req->setPayload(data);
 
 		pending_transaction_count++;
 	        pendingTransactions->insert( std::pair<SimpleMem::Request::id_t, SimpleMem::Request*>(req->id, req) );
@@ -162,14 +168,17 @@ void ArielCore::commitWriteEvent(const uint64_t address,
 }
 
 void ArielCore::handleEvent(SimpleMem::Request* event) {
-    ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " handling a memory event.\n", coreID));
+    //ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " handling a memory event.\n", coreID));
 
     SimpleMem::Request::id_t mev_id = event->id;
     auto find_entry = pendingTransactions->find(mev_id);
 
     if(find_entry != pendingTransactions->end()) {
-        ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Correctly identified event in pending transactions, removing from list, before there are: %" PRIu32 " transactions pending.\n",
-                (uint32_t) pendingTransactions->size()));
+        ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 ", time: %" PRIu64 ": received memory response: Cmd: %s, VAddr: %" PRIu64 ", Size: %" PRIu64 ", PhysAddr: %" PRIu64 "\n", 
+                    coreID, tunnel->getCycles(), (find_entry->second->cmd == SimpleMem::Request::ReadResp ? "ReadResp" : "WriteResp"), find_entry->second->virtualAddr, find_entry->second->size, find_entry->second->addr));
+	        
+        //ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Correctly identified event in pending transactions, removing from list, before there are: %" PRIu32 " transactions pending.\n",
+        //        (uint32_t) pendingTransactions->size()));
 
         pendingTransactions->erase(find_entry);
         pending_transaction_count--;
@@ -385,7 +394,7 @@ void ArielCore::handleFreeEvent(ArielFreeEvent* rFE) {
 }
 
 void ArielCore::handleReadRequest(ArielReadEvent* rEv) {
-	ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " processing a read event...\n", coreID));
+	//ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " processing a read event...\n", coreID));
 
 	const uint64_t readAddress = rEv->getAddress();
 	const uint64_t readLength  = (uint64_t) rEv->getLength();
@@ -399,19 +408,19 @@ void ArielCore::handleReadRequest(ArielReadEvent* rEv) {
 	const uint64_t addr_offset  = readAddress % ((uint64_t) cacheLineSize);
 
 	if((addr_offset + readLength) <= cacheLineSize) {
-		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " generating a non-split read request: Addr=%" PRIu64 " Length=%" PRIu64 "\n",
-			coreID, readAddress, readLength));
+		//ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " generating a non-split read request: Addr=%" PRIu64 " Length=%" PRIu64 "\n",
+		//	coreID, readAddress, readLength));
 
 		// We do not need to perform a split operation
 		const uint64_t physAddr = memmgr->translateAddress(readAddress);
 
-		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " issuing read, VAddr=%" PRIu64 ", Size=%" PRIu64 ", PhysAddr=%" PRIu64 "\n", 
-			coreID, readAddress, readLength, physAddr));
+		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 ", time: %" PRIu64 ": issuing read, VAddr=%" PRIu64 ", Size=%" PRIu64 ", PhysAddr=%" PRIu64 "\n", 
+			coreID, tunnel->getCycles(), readAddress, readLength, physAddr));
 
 		commitReadEvent(physAddr, readAddress, (uint32_t) readLength);
 	} else {
-		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " generating a split read request: Addr=%" PRIu64 " Length=%" PRIu64 "\n",
-			coreID, readAddress, readLength));
+		//ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " generating a split read request: Addr=%" PRIu64 " Length=%" PRIu64 "\n",
+		//	coreID, readAddress, readLength));
 
 		// We need to perform a split operation
 		const uint64_t leftAddr = readAddress;
@@ -423,8 +432,8 @@ void ArielCore::handleReadRequest(ArielReadEvent* rEv) {
 		const uint64_t physLeftAddr = memmgr->translateAddress(leftAddr);
 		const uint64_t physRightAddr = memmgr->translateAddress(rightAddr);
 
-		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " issuing split-address read, LeftVAddr=%" PRIu64 ", RightVAddr=%" PRIu64 ", LeftSize=%" PRIu64 ", RightSize=%" PRIu64 ", LeftPhysAddr=%" PRIu64 ", RightPhysAddr=%" PRIu64 "\n", 
-			coreID, leftAddr, rightAddr, leftSize, rightSize, physLeftAddr, physRightAddr));
+		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 ", time: %" PRIu64 ": issuing split-address read, LeftVAddr=%" PRIu64 ", RightVAddr=%" PRIu64 ", LeftSize=%" PRIu64 ", RightSize=%" PRIu64 ", LeftPhysAddr=%" PRIu64 ", RightPhysAddr=%" PRIu64 "\n", 
+			coreID, tunnel->getCycles(), leftAddr, rightAddr, leftSize, rightSize, physLeftAddr, physRightAddr));
 
 		if(perform_checks > 0) {
 			if( (leftSize + rightSize) != readLength ) {
@@ -453,7 +462,7 @@ void ArielCore::handleReadRequest(ArielReadEvent* rEv) {
 }
 
 void ArielCore::handleWriteRequest(ArielWriteEvent* wEv) {
-	ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " processing a write event...\n", coreID));
+	//ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " processing a write event...\n", coreID));
 
 	const uint64_t writeAddress = wEv->getAddress();
 	const uint64_t writeLength  = wEv->getLength();
@@ -467,19 +476,19 @@ void ArielCore::handleWriteRequest(ArielWriteEvent* wEv) {
 	const uint64_t addr_offset  = writeAddress % ((uint64_t) cacheLineSize);
 
 	if((addr_offset + writeLength) <= cacheLineSize) {
-		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " generating a non-split write request: Addr=%" PRIu64 " Length=%" PRIu64 "\n",
-			coreID, writeAddress, writeLength));
+		//ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " generating a non-split write request: Addr=%" PRIu64 " Length=%" PRIu64 "\n",
+		//	coreID, writeAddress, writeLength));
 	
 		// We do not need to perform a split operation
 		const uint64_t physAddr = memmgr->translateAddress(writeAddress);
 		
-		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " issuing write, VAddr=%" PRIu64 ", Size=%" PRIu64 ", PhysAddr=%" PRIu64 "\n", 
-			coreID, writeAddress, writeLength, physAddr));
+		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " issuing write, time: %" PRIu64 ": VAddr=%" PRIu64 ", Size=%" PRIu64 ", PhysAddr=%" PRIu64 "\n", 
+			coreID, tunnel->getCycles(), writeAddress, writeLength, physAddr));
 
 		commitWriteEvent(physAddr, writeAddress, (uint32_t) writeLength);
 	} else {
-		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " generating a split write request: Addr=%" PRIu64 " Length=%" PRIu64 "\n",
-			coreID, writeAddress, writeLength));
+		//ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " generating a split write request: Addr=%" PRIu64 " Length=%" PRIu64 "\n",
+		//	coreID, writeAddress, writeLength));
 	
 		// We need to perform a split operation
 		const uint64_t leftAddr = writeAddress;
@@ -491,8 +500,8 @@ void ArielCore::handleWriteRequest(ArielWriteEvent* wEv) {
 		const uint64_t physLeftAddr = memmgr->translateAddress(leftAddr);
 		const uint64_t physRightAddr = memmgr->translateAddress(rightAddr);
 
-		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " issuing split-address write, LeftVAddr=%" PRIu64 ", RightVAddr=%" PRIu64 ", LeftSize=%" PRIu64 ", RightSize=%" PRIu64 ", LeftPhysAddr=%" PRIu64 ", RightPhysAddr=%" PRIu64 "\n", 
-			coreID, leftAddr, rightAddr, leftSize, rightSize, physLeftAddr, physRightAddr));
+		ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " issuing split-address write, time: %" PRIu64 ": LeftVAddr=%" PRIu64 ", RightVAddr=%" PRIu64 ", LeftSize=%" PRIu64 ", RightSize=%" PRIu64 ", LeftPhysAddr=%" PRIu64 ", RightPhysAddr=%" PRIu64 "\n", 
+			coreID, tunnel->getCycles(), leftAddr, rightAddr, leftSize, rightSize, physLeftAddr, physRightAddr));
 
 		if(perform_checks > 0) {
 			if( (leftSize + rightSize) != writeLength ) {
@@ -572,10 +581,11 @@ bool ArielCore::processNextEvent() {
 		ARIEL_CORE_VERBOSE(8, output->verbose(CALL_INFO, 8, 0, "Core %" PRIu32 " next event is READ_ADDRESS\n", coreID));
 
 //		if(pendingTransactions->size() < maxPendingTransactions) {
-		if(pending_transaction_count < maxPendingTransactions) {
+		if(pending_transaction_count < maxPendingTransactions && readThisCycle < 2) {
 			ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Found a read event, fewer pending transactions than permitted so will process...\n"));
 			removeEvent = true;
 			handleReadRequest(dynamic_cast<ArielReadEvent*>(nextEvent));
+                        readThisCycle++;
 		} else {
 			ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Pending transaction queue is currently full for core %" PRIu32 ", core will stall for new events\n", coreID));
 			break;
@@ -586,10 +596,12 @@ bool ArielCore::processNextEvent() {
 		ARIEL_CORE_VERBOSE(8, output->verbose(CALL_INFO, 8, 0, "Core %" PRIu32 " next event is WRITE_ADDRESS\n", coreID));
 
 //		if(pendingTransactions->size() < maxPendingTransactions) {
-		if(pending_transaction_count < maxPendingTransactions) {
+		if(pending_transaction_count < maxPendingTransactions && writeThisCycle < 1) {
+
 			ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Found a write event, fewer pending transactions than permitted so will process...\n"));
 			removeEvent = true;
 			handleWriteRequest(dynamic_cast<ArielWriteEvent*>(nextEvent));
+                        writeThisCycle++;
 		} else {
 			ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Pending transaction queue is currently full for core %" PRIu32 ", core will stall for new events\n", coreID));
 			break;
@@ -653,6 +665,8 @@ bool ArielCore::processNextEvent() {
 }
 
 void ArielCore::tick() {
+        readThisCycle = 0;
+        writeThisCycle = 0;
 	if(! isHalted) {
 		ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Ticking core id %" PRIu32 "\n", coreID));
 		for(uint32_t i = 0; i < maxIssuePerCycle; ++i) {

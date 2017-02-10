@@ -138,6 +138,7 @@ MemNIC::MemNIC(Component *comp, Params& params) :
     typeInfo.interleaveSize   = interleaveSize_;
     typeInfo.interleaveStep   = interleaveStep_;
     addTypeInfo( typeInfo );
+
 }
 
 
@@ -177,7 +178,7 @@ void MemNIC::init(unsigned int phase)
             }
         }
         typeInfoSent = true;
-        dbg->debug(_L10_, "Sent init data!\n");
+        dbg->debug(_L10_, "%s, Sent init data!\n", comp->getName().c_str());
     }
     // while ( SST::Event *ev = link_control->recvInitData() ) {
     while ( SimpleNetwork::Request *req = link_control->recvInitData() ) {
@@ -289,27 +290,6 @@ bool MemNIC::clock(void)
 bool MemNIC::recvNotify(int) {
     MemEvent * me = recv();
     if (me) {
-#if 0
-        if ( !isRequestAddressValid(me) ) {
-            dbg->fatal(CALL_INFO, 1, "MemoryController \"%s\" received request from \"%s\" with invalid address.\n"
-                "\t\tRequested Address:   0x%" PRIx64 "\n"
-                "\t\tMC Range Start:      0x%" PRIx64 "\n"
-                "\t\tMC Range End:        0x%" PRIx64 "\n"
-                "\t\tMC Interleave Step:  0x%" PRIx64 "\n"
-                "\t\tMC Interleave Size:  0x%" PRIx64 "\n",
-                comp->getName().c_str(),
-                me->getSrc().c_str(), me->getAddr(),
-                rangeStart_, (rangeStart_ + memSize_),
-                interleaveStep_, interleaveSize_);
-        }
-#endif
-
-        // A memory controller should only know about a contiguous memory space
-        // the MemNIC should convert to a contiguous address before the MemEvent
-        // hits the memory controller and probably needs to fixup the response
-        // Addr convertAddressToLocalAddress(Addr addr)
-        
-       
 #ifdef __SST_DEBUG_OUTPUT__
         if (DEBUG_ALL || DEBUG_ADDR == me->getBaseAddr())
             dbg->debug(_L9_, "%s, memNIC recv: src: %s. (Cmd: %s, Rqst size: %u, Payload size: %u)\n", 
@@ -374,8 +354,8 @@ void MemNIC::send(MemEvent *ev)
     req->vn = 0;
 #ifdef __SST_DEBUG_OUTPUT__
     if (DEBUG_ALL || DEBUG_ADDR == ev->getBaseAddr())
-        dbg->debug(_L9_, "%s, memNIC send: dst: %s; bits: %zu. (Cmd: %s, Rqst size: %u, Payload size: %u)\n", 
-                comp->getName().c_str(), ev->getDst().c_str(), req->size_in_bits, CommandString[ev->getCmd()], ev->getSize(), ev->getPayloadSize());
+        dbg->debug(_L9_, "%s, memNIC send: dst: %s (%" PRIu64 "); bits: %zu. (Cmd: %s, Rqst size: %u, Payload size: %u)\n", 
+                comp->getName().c_str(), ev->getDst().c_str(), req->dest, req->size_in_bits, CommandString[ev->getCmd()], ev->getSize(), ev->getPayloadSize());
 #endif
     req->givePayload(mre);
     

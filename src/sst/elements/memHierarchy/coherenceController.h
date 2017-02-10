@@ -161,6 +161,7 @@ protected:
     uint64_t maxBytesUp;
     uint64_t maxBytesDown;
     uint64_t packetHeaderBytes;
+    int      maxEventsUp;
 
     /***** Functions used by child classes *****/
 

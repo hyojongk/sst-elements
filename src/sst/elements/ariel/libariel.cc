@@ -115,6 +115,7 @@ static const ElementInfoParam ariel_params[] = {
     {"clock", "Clock rate at which events are generated and processed", "1GHz"},
     {"tracegen", "Select the trace generator for Ariel (which records traced memory operations", ""},
     {"memmgr", "Memory manager to use for address translation", "ariel.MemoryManagerSimple"},
+    {"mallocflagfile", "If using ariel_malloc_flag function in the executable, file specifying flag ids to use. Leave empty for none.", ""},
     {NULL, NULL, NULL}
 };
 

@@ -47,13 +47,13 @@ logicLayer::logicLayer( ComponentId_t id, Params& params ) :
   bwlimit = params.find( "bwlimit", -1 );
   if (-1 == bwlimit ) {
     dbg.fatal(CALL_INFO, -1, 
-	   " no <bwlimit> tag defined for logiclayer\n");
+	   " no bwlimit parameter defined for logiclayer\n");
   }
 
   int mask = params.find( "LL_MASK", -1 );
   if ( -1 == mask ) {
     dbg.fatal(CALL_INFO, -1, 
-	   " no <LL_MASK> tag defined for logiclayer\n");
+	   " no LL_MASK parameter defined for logiclayer\n");
   }
   LL_MASK = mask;
 
@@ -77,7 +77,7 @@ logicLayer::logicLayer( ComponentId_t id, Params& params ) :
     printf(" Connected %d Vaults\n", numVaults);
   } else {
     dbg.fatal(CALL_INFO, -1, 
-	   " no <vaults> tag defined for LogicLayer\n");
+	   " no vaults parameter defined for LogicLayer\n");
   }
 
   // connect chain

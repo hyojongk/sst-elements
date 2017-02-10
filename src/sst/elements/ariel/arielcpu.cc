@@ -194,6 +194,14 @@ ArielCPU::ArielCPU(ComponentId_t id, Params& params) :
     output->verbose(CALL_INFO, 1, 0, "Tracking the stack and dumping on malloc calls is %s.\n", 
             keep_malloc_stack_trace == 1 ? "ENABLED" : "DISABLED");
 
+    std::string malloc_map_filename = params.find<std::string>("mallocflagfile", "");
+    if (malloc_map_filename == "") {
+        output->verbose(CALL_INFO, 1, 0, "Malloc map file is DISABLED\n");
+    } else {
+        output->verbose(CALL_INFO, 1, 0, "Malloc map fiel is ENABLED, using file '%s'\n", malloc_map_filename.c_str());
+    }
+
+
     tunnel = new ArielTunnel(id, core_count, maxCoreQueueLen);
     std::string shmem_region_name = tunnel->getRegionName();
     output->verbose(CALL_INFO, 1, 0, "Base pipe name: %s\n", shmem_region_name.c_str());
@@ -201,7 +209,7 @@ ArielCPU::ArielCPU(ComponentId_t id, Params& params) :
     appLauncher = params.find<std::string>("launcher", ARIEL_STRINGIZE(PINTOOL_EXECUTABLE));
 
     const uint32_t launch_param_count = (uint32_t) params.find<uint32_t>("launchparamcount", 0);
-    const uint32_t pin_arg_count = 25 + launch_param_count;
+    const uint32_t pin_arg_count = 27 + launch_param_count;
 
     execute_args = (char**) malloc(sizeof(char*) * (pin_arg_count + app_argc));
 
@@ -267,6 +275,9 @@ ArielCPU::ArielCPU(ComponentId_t id, Params& params) :
     execute_args[arg++] = const_cast<char*>("-d");
     execute_args[arg++] = (char*) malloc(sizeof(char) * 8);
     sprintf(execute_args[arg-1], "%" PRIu32, memmgr->getDefaultPool());
+    execute_args[arg++] = const_cast<char*>("-u");
+    execute_args[arg++] = (char*) malloc(sizeof(char) * (malloc_map_filename.size() + 1));
+    strcpy(execute_args[arg-1], malloc_map_filename.c_str());
     execute_args[arg++] = const_cast<char*>("--");
     execute_args[arg++] = (char*) malloc(sizeof(char) * (executable.size() + 1));
     strcpy(execute_args[arg-1], executable.c_str());

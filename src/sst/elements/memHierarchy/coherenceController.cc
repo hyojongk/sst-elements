@@ -59,7 +59,9 @@ CoherenceController::CoherenceController(Component * comp, Params &params) : Sub
     maxBytesUp = upLinkBW.getRoundedValue();
     maxBytesDown = downLinkBW.getRoundedValue();
     packetHeaderBytes = packetSize.getRoundedValue();
-    
+    maxEventsUp = params.find<int>("events_up_per_cycle", -1);
+    if (maxEventsUp == 0) maxEventsUp = -1;
+
     /* Initialize variables */
     timestamp_ = 0;
 
@@ -154,6 +156,7 @@ uint64_t CoherenceController::forwardMessage(MemEvent * event, Addr baseAddr, un
     /* Create event to be forwarded */
     MemEvent* forwardEvent;
     forwardEvent = new MemEvent(*event);
+    forwardEvent->setPayload(0, NULL); // Clear payload
     forwardEvent->setSrc(parent->getName());
     forwardEvent->setDst(getDestination(baseAddr));
     forwardEvent->setSize(requestSize);
@@ -166,7 +169,7 @@ uint64_t CoherenceController::forwardMessage(MemEvent * event, Addr baseAddr, un
     if (event->queryFlag(MemEvent::F_NONCACHEABLE)) {
         forwardEvent->setFlag(MemEvent::F_NONCACHEABLE);
         deliveryTime = timestamp_ + mshrLatency_;
-    } else deliveryTime = baseTime + tagLatency_; 
+    } else deliveryTime = baseTime + tagLatency_ + mshrLatency_;    // Time to lookup tag and determine miss, followed by time to check MSHR (assume these aren't done in parallel) 
     
     Response fwdReq = {forwardEvent, deliveryTime, packetHeaderBytes + forwardEvent->getPayloadSize() };
     addToOutgoingQueue(fwdReq);
@@ -221,7 +224,8 @@ bool CoherenceController::sendOutgoingCommands(SimTime_t curTime) {
 
     // Check for ready events in outgoing 'up' queue
     bytesLeft = maxBytesUp;
-    while (!outgoingEventQueueUp_.empty() && outgoingEventQueueUp_.front().deliveryTime <= timestamp_) {
+    int eventsLeft = maxEventsUp;
+    while (!outgoingEventQueueUp_.empty() && outgoingEventQueueUp_.front().deliveryTime <= timestamp_ && eventsLeft != 0) {
         MemEvent * outgoingEvent = outgoingEventQueueUp_.front().event;
         if (maxBytesUp != 0) {
             if (bytesLeft == 0) break;
@@ -238,6 +242,7 @@ bool CoherenceController::sendOutgoingCommands(SimTime_t curTime) {
         } else {
             highNetPort_->send(outgoingEvent);
         }
+        eventsLeft++;
         outgoingEventQueueUp_.pop_front();
 
 #ifdef __SST_DEBUG_OUTPUT__

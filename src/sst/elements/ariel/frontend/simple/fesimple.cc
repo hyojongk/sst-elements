@@ -70,6 +70,8 @@ KNOB<UINT32> StartupMode(KNOB_MODE_WRITEONCE, "pintool",
     "s", "1", "Mode for configuring profile behavior, 1 = start enabled, 0 = start disabled, 2 = attempt auto detect");
 KNOB<UINT32> InterceptMultiLevelMemory(KNOB_MODE_WRITEONCE, "pintool",
     "m", "1", "Should intercept multi-level memory allocations, copies and frees, 1 = start enabled, 0 = start disabled");
+KNOB<string> UseMallocMap(KNOB_MODE_WRITEONCE, "pintool",
+    "u", "", "Should intercept malloc flags and interpret using a malloc map: specify filename or leave blank for disabled"); 
 KNOB<UINT32> KeepMallocStackTrace(KNOB_MODE_WRITEONCE, "pintool",
     "k", "1", "Should keep shadow stack and dump on malloc calls. 1 = enabled, 0 = disabled");
 KNOB<UINT32> DefaultMemoryPool(KNOB_MODE_WRITEONCE, "pintool",
@@ -96,6 +98,17 @@ UINT64* lastMallocLoc;
 std::vector< std::set<ADDRINT> > instPtrsList;
 UINT32 overridePool;
 bool shouldOverride;
+
+// malloc_flag structures
+set<int64_t> mallocFlagLocations;
+struct mallocFlagInfo {
+    bool valid;
+    int count;
+    int level;
+    int id;
+    mallocFlagInfo(bool a, int b, int c, int d) : valid(a), count(b), level(c), id(d) {}
+};
+std::vector<mallocFlagInfo> mallocFlag;
 
 
 /****************************************************************/
@@ -548,6 +561,31 @@ void mapped_ariel_output_stats_buoy(uint64_t marker) {
     tunnel->writeMessage(thr, ac);
 }
 
+void mapped_ariel_malloc_flag_fortran(int* mallocLocId, int* count, int* level) {
+    THREADID thr = PIN_ThreadId();
+    int64_t id = (int64_t) *mallocLocId;
+    if (mallocFlagLocations.find(id) != mallocFlagLocations.end()) {
+        mallocFlag[thr].valid = true;
+        mallocFlag[thr].count = *count;
+        mallocFlag[thr].level = *level;
+        mallocFlag[thr].id = id;
+    } else {
+        mallocFlag[thr].valid = false;
+    }
+}
+
+void mapped_ariel_malloc_flag(int64_t mallocLocId, int count, int level) {
+    THREADID thr = PIN_ThreadId();
+    if (mallocFlagLocations.find(mallocLocId) != mallocFlagLocations.end()) {
+        mallocFlag[thr].valid = true;
+        mallocFlag[thr].count = count;
+        mallocFlag[thr].level = level;
+        mallocFlag[thr].id = mallocLocId;
+    } else {
+        mallocFlag[thr].valid = false;
+    }
+}
+
 #if ! defined(__APPLE__)
 int mapped_clockgettime(clockid_t clock, struct timespec *tp) {
     if (tp == NULL) { errno = EINVAL; return -1; }
@@ -747,13 +785,23 @@ VOID ariel_postmalloc_instrument(ADDRINT allocLocation) {
         ac.mlm_map.vaddr = virtualAddress;
         ac.mlm_map.alloc_len = allocationLength;
 
-
-        if(shouldOverride) {
+        if (UseMallocMap.Value() != "") {
+            if (mallocFlag[thr].valid) {
+                ac.mlm_map.alloc_level = mallocFlag[thr].level;
+                ac.instPtr = mallocFlag[thr].id;
+                mallocFlag[thr].count--;
+                if (mallocFlag[thr].count == 0) {
+                    mallocFlag[thr].valid = false;
+                }
+                tunnel->writeMessage(thr, ac);
+            }
+        } else if (shouldOverride) {
             ac.mlm_map.alloc_level = overridePool;
+            tunnel->writeMessage(thr, ac);
         } else {
             ac.mlm_map.alloc_level = allocationLevel;
+            tunnel->writeMessage(thr, ac);
         }
-        tunnel->writeMessage(thr, ac);
         
     	/*printf("ARIEL: Created a malloc of size: %" PRIu64 " in Ariel\n",
          * (UINT64) allocationLength);*/
@@ -787,7 +835,7 @@ VOID InstrumentRoutine(RTN rtn, VOID* args) {
             enable_output = false;
         }
         return;
-    } else if (RTN_Name(rtn) == "gettimeofday" || RTN_Name(rtn) == "_gettimeofday") {
+    } else if (RTN_Name(rtn) == "gettimeofday" || RTN_Name(rtn) == "_gettimeofday" || RTN_Name(rtn) == "ariel_gettimeofday") {
         fprintf(stderr,"Identified routine: gettimeofday, replacing with Ariel equivalent...\n");
         RTN_Replace(rtn, (AFUNPTR) mapped_gettimeofday);
         fprintf(stderr,"Replacement complete.\n");
@@ -821,7 +869,7 @@ VOID InstrumentRoutine(RTN rtn, VOID* args) {
         RTN_Replace(rtn, (AFUNPTR) ariel_mlm_set_pool);
         fprintf(stderr, "Replacement complete.\n");
         return;
-    } else if ((InterceptMultiLevelMemory.Value() > 0) && (
+/*    } else if ((InterceptMultiLevelMemory.Value() > 0) && (
                 RTN_Name(rtn) == "malloc" || RTN_Name(rtn) == "_malloc" || RTN_Name(rtn) == "__libc_malloc" || RTN_Name(rtn) == "__libc_memalign" || RTN_Name(rtn) == "_gfortran_malloc")) {
     		
         fprintf(stderr, "Identified routine: malloc/_malloc, replacing with Ariel equivalent...\n");
@@ -850,7 +898,7 @@ VOID InstrumentRoutine(RTN rtn, VOID* args) {
                 IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
                 IARG_END);
 
-        RTN_Close(rtn);
+        RTN_Close(rtn);*/
     } else if (RTN_Name(rtn) == "ariel_output_stats" || RTN_Name(rtn) == "_ariel_output_stats" || RTN_Name(rtn) == "__arielfort_MOD_ariel_output_stats") {
         fprintf(stderr, "Identified routine: ariel_output_stats, replacing with Ariel equivalent..\n");
         RTN_Replace(rtn, (AFUNPTR) mapped_ariel_output_stats);
@@ -861,8 +909,27 @@ VOID InstrumentRoutine(RTN rtn, VOID* args) {
         RTN_Replace(rtn, (AFUNPTR) mapped_ariel_output_stats_buoy);
         fprintf(stderr, "Replacement complete\n");
         return;
+    } else if (UseMallocMap.Value() != "") {
+        if (RTN_Name(rtn) == "ariel_malloc_flag" || RTN_Name(rtn) == "_ariel_malloc_flag") {
+            fprintf(stderr, "Identified routine: ariel_malloc_flag, replacing with Ariel equivalent..\n");
+            RTN_Replace(rtn, (AFUNPTR) mapped_ariel_malloc_flag);
+            return;
+        } else if (RTN_Name(rtn) == "__arielfort_MOD_ariel_malloc_flag") {
+            fprintf(stderr, "Identified routine: ariel_malloc_flag, replacing with Ariel equivalent..\n");
+            RTN_Replace(rtn, (AFUNPTR) mapped_ariel_malloc_flag_fortran);
+            return;
+        }
     }
+}
 
+
+void loadFastMemLocations() {
+    std::ifstream infile(UseMallocMap.Value().c_str());
+    int64_t val;
+    while (infile >> val) {
+        mallocFlagLocations.insert(val);
+    }
+    infile.close();
 }
 
 
@@ -979,6 +1046,12 @@ int main(int argc, char *argv[])
     // Instrument traces to capture stack
     if (KeepMallocStackTrace.Value() == 1)
         TRACE_AddInstrumentFunction(InstrumentTrace, 0);
+    if (UseMallocMap.Value() != "") {
+        loadFastMemLocations();
+        for (int i = 0; i < core_count; i++) {
+            mallocFlag.push_back(mallocFlagInfo(false, 0, 0, 0));
+        }
+    }
 
     fprintf(stderr, "ARIEL: Starting program.\n");
     fflush(stdout);

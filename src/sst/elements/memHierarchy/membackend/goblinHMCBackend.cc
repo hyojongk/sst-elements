@@ -303,6 +303,7 @@ void GOBLINHMCSimBackend::finish() {
 }
 
 void GOBLINHMCSimBackend::clock() {
+        if (tag_req_map.empty()) return;
 	output->verbose(CALL_INFO, 8, 0, "Clocking HMC...\n");
 	int rc = hmcsim_clock(&the_hmc);
 
