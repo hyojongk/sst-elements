@@ -62,6 +62,10 @@ typedef uint64_t Addr;
     X(NACK)             /* NACK response to a message */\
     X(AckInv)           /* Acknowledgement response to an invalidation request */\
     X(AckPut)           /* Acknowledgement response to a replacement (Put*) request */\
+    /* HTM Commands */\
+    X(BeginTx)          /* NACK response to a message */\
+    X(EndTx)            /* Acknowledgement response to an invalidation request */\
+    X(AbortTx)          /* Send Abort back up the chain */ \
     X(LAST_CMD)
 
 /** Valid commands for the MemEvent */
@@ -89,8 +93,8 @@ static const ElementInfoStatistic networkMemoryInspector_statistics[] = {
 #undef X_TYPES
 
 
-/* Coherence states 
- * Not all protocols use all states 
+/* Coherence states
+ * Not all protocols use all states
  */
 #define STATE_TYPES \
     X(NP)    /* Invalid */\
@@ -156,6 +160,7 @@ public:
     static const uint32_t F_NONCACHEABLE  = 0x00000010;  /* Used to specify that this memory event should not be cached */
     static const uint32_t F_LLSC          = 0x00000100;  /* Load Link / Store Conditional */
     static const uint32_t F_SUCCESS       = 0x00001000;  /* Indicates a successful response (used for flushes, TODO use for LLSC) */
+    static const uint32_t F_TRANSACTION   = 0x00010000;  /* Indicates that this access is part of a transactions */
 
     typedef std::vector<uint8_t> dataVec;       /** Data Payload type */
 
