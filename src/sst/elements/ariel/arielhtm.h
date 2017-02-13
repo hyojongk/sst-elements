@@ -14,34 +14,30 @@
 // distribution.
 
 
-#ifndef _H_SST_ARIEL_EVENT
-#define _H_SST_ARIEL_EVENT
+#ifndef _H_SST_ARIEL_HTM_EVENT
+#define _H_SST_ARIEL_HTM_EVENT
 
+#include "arielevent.h"
 
+using namespace SST;
 
 namespace SST {
 namespace ArielComponent {
 
-enum ArielEventType {
-	READ_ADDRESS,
-	WRITE_ADDRESS,
-	START_DMA_TRANSFER,
-	WAIT_ON_DMA_TRANSFER,
-	CORE_EXIT,
-	NOOP,
-	MALLOC,
-	FREE,
-	SWITCH_POOL,
-	START_TRANSACTION,
-	END_TRANSACTION
-};
+class ArielHTMEvent : public ArielEvent {
 
-class ArielEvent {
+public:
+   ArielHTMEvent(ArielEventType eventType) :
+      txEventType(eventType) {}
+   ~ArielHTMEvent() {}
 
-	public:
-		ArielEvent();
-		virtual ~ArielEvent();
-		virtual ArielEventType getEventType() const = 0;
+   ArielEventType getEventType() const
+   {
+      return txEventType;
+   }
+
+private:
+   ArielEventType txEventType;
 
 };
 

@@ -43,6 +43,9 @@ ArielCore::ArielCore(ArielTunnel *tunnel, SimpleMem* coreToCacheLink,
 	pendingTransactions = new std::unordered_map<SimpleMem::Request::id_t, SimpleMem::Request*>();
 	pending_transaction_count = 0;
 
+        bloop = 0;
+	isTransaction_ = 0;
+
 	char* subID = (char*) malloc(sizeof(char) * 32);
 	sprintf(subID, "%" PRIu32, thisCoreID);
 
@@ -85,6 +88,77 @@ ArielCore::ArielCore(ArielTunnel *tunnel, SimpleMem* coreToCacheLink,
 	}
 
 	currentCycles = 0;
+}
+
+ArielCore::ArielCore(ArielTunnel *tunnel,  ArielTunnel *pin_tunnel, SimpleMem* coreToCacheLink,
+        uint32_t thisCoreID, uint32_t maxPendTrans,
+        Output* out, uint32_t maxIssuePerCyc,
+        uint32_t maxQLen, uint64_t cacheLineSz, SST::Component* own,
+        ArielMemoryManager* memMgr, const uint32_t perform_address_checks, Params& params) :
+        output(out), tunnel(tunnel), pin_tunnel(pin_tunnel), perform_checks(perform_address_checks),
+        verbosity(static_cast<uint32_t>(out->getVerboseLevel()))
+{
+        output->verbose(CALL_INFO, 2, 0, "Creating core with ID %" PRIu32 ", maximum queue length=%" PRIu32 ", max issue is: %" PRIu32 "\n", thisCoreID, maxQLen, maxIssuePerCyc);
+        cacheLink = coreToCacheLink;
+        allocLink = 0;
+        coreID = thisCoreID;
+        maxPendingTransactions = maxPendTrans;
+        isHalted = false;
+        maxIssuePerCycle = maxIssuePerCyc;
+        maxQLength = maxQLen;
+        cacheLineSize = cacheLineSz;
+        owner = own;
+        memmgr = memMgr;
+
+        coreQ = new std::queue<ArielEvent*>();
+        pendingTransactions = new std::unordered_map<SimpleMem::Request::id_t, SimpleMem::Request*>();
+        pending_transaction_count = 0;
+
+        bloop = 0;
+        isTransaction_ = 0;
+
+        char* subID = (char*) malloc(sizeof(char) * 32);
+        sprintf(subID, "%" PRIu32, thisCoreID);
+
+        statReadRequests  = own->registerStatistic<uint64_t>( "read_requests", subID );
+        statWriteRequests = own->registerStatistic<uint64_t>( "write_requests", subID );
+        statSplitReadRequests = own->registerStatistic<uint64_t>( "split_read_requests", subID );
+        statSplitWriteRequests = own->registerStatistic<uint64_t>( "split_write_requests", subID );
+        statNoopCount     = own->registerStatistic<uint64_t>( "no_ops", subID );
+        statInstructionCount = own->registerStatistic<uint64_t>( "instruction_count", subID );
+
+        statFPSPIns = own->registerStatistic<uint64_t>("fp_sp_ins", subID);
+        statFPDPIns = own->registerStatistic<uint64_t>("fp_dp_ins", subID);
+
+        statFPSPSIMDIns = own->registerStatistic<uint64_t>("fp_sp_simd_ins", subID);
+        statFPDPSIMDIns = own->registerStatistic<uint64_t>("fp_dp_simd_ins", subID);
+
+        statFPSPScalarIns = own->registerStatistic<uint64_t>("fp_sp_scalar_ins", subID);
+        statFPDPScalarIns = own->registerStatistic<uint64_t>("fp_dp_scalar_ins", subID);
+
+        statFPSPOps = own->registerStatistic<uint64_t>("fp_sp_ops", subID);
+        statFPDPOps = own->registerStatistic<uint64_t>("fp_dp_ops", subID);
+
+        free(subID);
+
+        std::string traceGenName = params.find<std::string>("tracegen", "");
+        enableTracing = ("" != traceGenName);
+
+        // If we enabled tracing then open up the correct file.
+        if(enableTracing) {
+                Params interfaceParams = params.find_prefix_params("tracer.");
+                traceGen = dynamic_cast<ArielTraceGenerator*>( own->loadModuleWithComponent(traceGenName, own,
+                        interfaceParams) );
+
+                if(NULL == traceGen) {
+                        output->fatal(CALL_INFO, -1, "Unable to load tracing module: \"%s\"\n",
+                                traceGenName.c_str());
+                }
+
+                traceGen->setCoreID(coreID);
+        }
+
+        currentCycles = 0;
 }
 
 ArielCore::~ArielCore() {
@@ -135,6 +209,11 @@ void ArielCore::commitReadEvent(const uint64_t address,
 	        	printTraceEntry(true, (const uint64_t) req->addr, (const uint32_t) length);
 	        }
 
+	        if(get_isTransaction()){
+std::cout << "****  TX Read Event at " << req->addr << "  ****\n" << std::endl;
+			req->set_flags(SimpleMem::Request::F_TRANSACTION);
+		}
+
 	        // Actually send the event to the cache
 	        cacheLink->sendRequest(req);
 	}
@@ -156,13 +235,50 @@ void ArielCore::commitWriteEvent(const uint64_t address,
 	        	printTraceEntry(false, (const uint64_t) req->addr, (const uint32_t) length);
 	        }
 
+	        if(get_isTransaction()){
+std::cout << "****  TX Write Event at " << req->addr << "  ****\n" << std::endl;
+			req->set_flags(SimpleMem::Request::F_TRANSACTION);
+	        }
+
 	        // Actually send the event to the cache
         	cacheLink->sendRequest(req);
 	}
 }
 
+void ArielCore::commitTxBeginEvent(const uint32_t depth)
+{
+     SimpleMem::Request *req = new SimpleMem::Request(SimpleMem::Request::TxBegin, 0, 0);
+      // Actually send the event to the cache
+     cacheLink->sendRequest(req);
+//      bloop = 1;
+
+     std::cout << "SSTARIEL-B: commitTxBeginEvent\n" << std::flush;
+}
+
+void ArielCore::commitTxEndEvent(const uint32_t depth)
+{
+      SimpleMem::Request *req = new SimpleMem::Request(SimpleMem::Request::TxEnd, 0, 0);
+      // Actually send the event to the cache
+      cacheLink->sendRequest(req);
+//       bloop = 1;
+      std::cout << "SSTARIEL-B: commitTxEndEvent\n" << std::flush;
+
+}
+
 void ArielCore::handleEvent(SimpleMem::Request* event) {
     ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Core %" PRIu32 " handling a memory event.\n", coreID));
+
+//     std::cout << "SSTARIEL-B: handleEvent\n" << std::flush;
+    if(bloop) {
+       std::cout << "SSTARIEL-B: handleEvent bloop\n" << std::flush;
+//        tunnel->clearBuffer(coreID);
+       tunnel->updateTransactionState(coreID, TX_ABORT);
+
+       bloop = 0;
+    } else
+    {
+       tunnel->updateTransactionState(coreID, TX_COMMIT);
+    }
 
     SimpleMem::Request::id_t mev_id = event->id;
     auto find_entry = pendingTransactions->find(mev_id);
@@ -248,118 +364,150 @@ void ArielCore::createExitEvent() {
 	ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Generated an EXIT event.\n"));
 }
 
+void ArielCore::createTxBeginEvent() {
+	ArielHTMEvent* ev = new ArielHTMEvent(START_TRANSACTION);
+	coreQ->push(ev);
+
+	ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Generated a TxBegin event on core %" PRIu32 "\n", coreID));
+}
+
+void ArielCore::createTxEndEvent() {
+	ArielHTMEvent* ev = new ArielHTMEvent(END_TRANSACTION);
+	coreQ->push(ev);
+
+	ARIEL_CORE_VERBOSE(4, output->verbose(CALL_INFO, 4, 0, "Generated a TxEnd event on core %" PRIu32 "\n", coreID));
+}
+
 bool ArielCore::isCoreHalted() const {
 	return isHalted;
 }
 
 bool ArielCore::refillQueue() {
-    ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Refilling event queue for core %" PRIu32 "...\n", coreID));
+   ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Refilling event queue for core %" PRIu32 "...\n", coreID));
 
-    while(coreQ->size() < maxQLength) {
-        ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Attempting to fill events for core: %" PRIu32 " current queue size=%" PRIu32 ", max length=%" PRIu32 "\n",
-                coreID, (uint32_t) coreQ->size(), (uint32_t) maxQLength));
+   while(coreQ->size() < maxQLength)
+   {
+      ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Attempting to fill events for core: %" PRIu32 " current queue size=%" PRIu32 ", max length=%" PRIu32 "\n",
+	       coreID, (uint32_t) coreQ->size(), (uint32_t) maxQLength));
 
-        ArielCommand ac;
-        const bool avail = tunnel->readMessageNB(coreID, &ac);
+      ArielCommand ac;
+      const bool avail = tunnel->readMessageNB(coreID, &ac);
 
-        if ( !avail ) {
-            ARIEL_CORE_VERBOSE(32, output->verbose(CALL_INFO, 32, 0, "Tunnel claims no data on core: %" PRIu32 "\n", coreID));
-            return false;
-        }
+      if ( !avail )
+      {
+	 ARIEL_CORE_VERBOSE(32, output->verbose(CALL_INFO, 32, 0, "Tunnel claims no data on core: %" PRIu32 "\n", coreID));
+	 return false;
+      }
 
-        ARIEL_CORE_VERBOSE(32, output->verbose(CALL_INFO, 32, 0, "Tunnel reads data on core: %" PRIu32 "\n", coreID));
+      ARIEL_CORE_VERBOSE(32, output->verbose(CALL_INFO, 32, 0, "Tunnel reads data on core: %" PRIu32 "\n", coreID));
 
-        // There is data on the pipe
-        switch(ac.command) {
-        case ARIEL_OUTPUT_STATS:
-            fprintf(stdout, "Performing statistics output at simulation time = %" PRIu64 "\n", owner->getCurrentSimTimeNano());
-            Simulation::getSimulation()->getStatisticsProcessingEngine()->performGlobalStatisticOutput();
-            if (allocLink) {
-                // tell the allocate montior to dump stats. We
-                // optionally pass a marker number back in the instruction field
-                arielAllocTrackEvent *e 
-                    = new arielAllocTrackEvent(arielAllocTrackEvent::BUOY,
-                                               0, 0, 0, ac.instPtr);
-                allocLink->send(e);
-            }
-            break;
+      // There is data on the pipe
+      switch(ac.command)
+      {
+	 case ARIEL_OUTPUT_STATS:
+	       fprintf(stdout, "Performing statistics output at simulation time = %" PRIu64 "\n", owner->getCurrentSimTimeNano());
+	       Simulation::getSimulation()->getStatisticsProcessingEngine()->performGlobalStatisticOutput();
+	       if (allocLink)
+	       {
+		  // tell the allocate montior to dump stats. We
+		  // optionally pass a marker number back in the instruction field
+		  arielAllocTrackEvent *e
+		     = new arielAllocTrackEvent(arielAllocTrackEvent::BUOY,
+						0, 0, 0, ac.instPtr);
+		  allocLink->send(e);
+	       }
+	       break;
 
-        case ARIEL_START_INSTRUCTION:
-	    if(ARIEL_INST_SP_FP == ac.inst.instClass) {
-		statFPSPIns->addData(1);
+	 case ARIEL_START_INSTRUCTION:
+	       if(ARIEL_INST_SP_FP == ac.inst.instClass)
+	       {
+		  statFPSPIns->addData(1);
 
-		if(ac.inst.simdElemCount > 1) {
-			statFPSPSIMDIns->addData(1);
-		} else {
-			statFPSPScalarIns->addData(1);
-		}
+		  if(ac.inst.simdElemCount > 1) {
+			   statFPSPSIMDIns->addData(1);
+		  } else {
+			   statFPSPScalarIns->addData(1);
+		  }
 
-		if(ac.inst.simdElemCount < 32)
-			statFPSPOps->addData(ac.inst.simdElemCount);
-            } else if(ARIEL_INST_DP_FP == ac.inst.instClass) {
-		statFPDPIns->addData(1);
+		  if(ac.inst.simdElemCount < 32)
+			   statFPSPOps->addData(ac.inst.simdElemCount);
+	       }
+	       else if(ARIEL_INST_DP_FP == ac.inst.instClass)
+	       {
+		  statFPDPIns->addData(1);
 
-		if(ac.inst.simdElemCount > 1) {
-			statFPDPSIMDIns->addData(1);
-		} else {
-			statFPDPScalarIns->addData(1);
-		}
+		  if(ac.inst.simdElemCount > 1) {
+			   statFPDPSIMDIns->addData(1);
+		  } else {
+			   statFPDPScalarIns->addData(1);
+		  }
 
-		if(ac.inst.simdElemCount < 16)
-			statFPDPOps->addData(ac.inst.simdElemCount);
-	    }
+		  if(ac.inst.simdElemCount < 16)
+			   statFPDPOps->addData(ac.inst.simdElemCount);
+	       }
 
-            while(ac.command != ARIEL_END_INSTRUCTION) {
-                ac = tunnel->readMessage(coreID);
+	       while(ac.command != ARIEL_END_INSTRUCTION)
+	       {
+		  ac = tunnel->readMessage(coreID);
 
-                switch(ac.command) {
-                case ARIEL_PERFORM_READ:
-                    createReadEvent(ac.inst.addr, ac.inst.size);
-                    break;
+		  switch(ac.command)
+                  {
+                     case ARIEL_PERFORM_READ:
+                        createReadEvent(ac.inst.addr, ac.inst.size);
+                        break;
 
-                case ARIEL_PERFORM_WRITE:
-                    createWriteEvent(ac.inst.addr, ac.inst.size);
-                    break;
+                     case ARIEL_PERFORM_WRITE:
+                        createWriteEvent(ac.inst.addr, ac.inst.size);
+                        break;
 
-                case ARIEL_END_INSTRUCTION:
-                    break;
+                     case ARIEL_END_INSTRUCTION:
+                        break;
 
-                default:
-                    // Not sure what this is
-		    output->fatal(CALL_INFO, -1, "Error: Ariel did not understand command (%d) provided during instruction queue refill.\n", (int)(ac.command));
-                    break;
-                }
-            }
+                     default:
+                        // Not sure what this is
+                        output->fatal(CALL_INFO, -1, "Error: Ariel did not understand command (%d) provided during instruction queue refill.\n", (int)(ac.command));
+                        break;
+		  }
+	       }
 
-            // Add one to our instruction counts
-	    statInstructionCount->addData(1);
+               // Add one to our instruction counts
+               statInstructionCount->addData(1);
 
-            break;
+               break;
 
-        case ARIEL_NOOP:
-            createNoOpEvent();
-            break;
+	 case ARIEL_NOOP:
+	    createNoOpEvent();
+	    break;
 
-        case ARIEL_ISSUE_TLM_MAP:
-            createAllocateEvent(ac.mlm_map.vaddr, ac.mlm_map.alloc_len, ac.mlm_map.alloc_level, ac.instPtr);
-            break;
+	 case ARIEL_ISSUE_TLM_MAP:
+	    createAllocateEvent(ac.mlm_map.vaddr, ac.mlm_map.alloc_len, ac.mlm_map.alloc_level, ac.instPtr);
+	    break;
 
-        case ARIEL_ISSUE_TLM_FREE:
-            createFreeEvent(ac.mlm_free.vaddr);
-            break;
+	 case ARIEL_ISSUE_TLM_FREE:
+	    createFreeEvent(ac.mlm_free.vaddr);
+	    break;
 
-        case ARIEL_SWITCH_POOL:
-            createSwitchPoolEvent(ac.switchPool.pool);
-            break;
+	 case ARIEL_SWITCH_POOL:
+	    createSwitchPoolEvent(ac.switchPool.pool);
+	    break;
 
-        case ARIEL_PERFORM_EXIT:
-            createExitEvent();
-            break;
-        default:
-            // Not sure what this is
+	 case ARIEL_PERFORM_EXIT:
+	    createExitEvent();
+	    break;
+
+	 case ARIEL_START_TRANSACTION:
+	    createTxBeginEvent();
+	    break;
+
+	 case ARIEL_END_TRANSACTION:
+	    createTxEndEvent();
+	    break;
+
+	 default:
+	    // Not sure what this is
 	    output->fatal(CALL_INFO, -1, "Error: Ariel did not understand command (%d) provided during instruction queue refill.\n", (int)(ac.command));
-            break;
-        }
+	    break;
+      }
     }
 
 	ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Refilling event queue for core %" PRIu32 " is complete\n", coreID));
@@ -539,6 +687,28 @@ void ArielCore::handleAllocationEvent(ArielAllocateEvent* aEv) {
         }
 }
 
+void ArielCore::handleTxBeginEvent()
+{
+   set_isTransaction(1);
+   commitTxBeginEvent(1);
+}
+
+void ArielCore::handleTxEndEvent()
+{
+   set_isTransaction(0);
+   commitTxEndEvent(1);
+}
+
+void ArielCore::set_isTransaction(bool inValue)
+{
+   isTransaction_ = inValue;
+}
+
+bool ArielCore::get_isTransaction(void)
+{
+   return isTransaction_;
+}
+
 void ArielCore::printCoreStatistics() {
 }
 
@@ -607,8 +777,7 @@ bool ArielCore::processNextEvent() {
 		break;
 
 	case SWITCH_POOL:
-		ARIEL_CORE_VERBOSE(8, output->verbose(CALL_INFO, 8, 0, "Core %" PRIu32 " next event is a SWITCH_POOL\n",
-			coreID));
+		ARIEL_CORE_VERBOSE(8, output->verbose(CALL_INFO, 8, 0, "Core %" PRIu32 " next event is a SWITCH_POOL\n", coreID));
 		removeEvent = true;
 		handleSwitchPoolEvent(dynamic_cast<ArielSwitchPoolEvent*>(nextEvent));
 		break;
@@ -623,6 +792,18 @@ bool ArielCore::processNextEvent() {
 		ARIEL_CORE_VERBOSE(8, output->verbose(CALL_INFO, 8, 0, "Core %" PRIu32 " next event is MALLOC\n", coreID));
 		removeEvent = true;
 		handleAllocationEvent(dynamic_cast<ArielAllocateEvent*>(nextEvent));
+		break;
+
+	case START_TRANSACTION:
+		ARIEL_CORE_VERBOSE(8, output->verbose(CALL_INFO, 8, 0, "Core %" PRIu32 " next event is a START_TRANSACTION\n", coreID));
+		removeEvent = true;
+		handleTxBeginEvent();
+		break;
+
+	case END_TRANSACTION:
+		ARIEL_CORE_VERBOSE(8, output->verbose(CALL_INFO, 8, 0, "Core %" PRIu32 " next event is an END_TRANSACTION \n", coreID));
+		removeEvent = true;
+		handleTxEndEvent();
 		break;
 
 	case CORE_EXIT:
