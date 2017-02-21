@@ -63,9 +63,12 @@ typedef uint64_t Addr;
     X(AckInv)           /* Acknowledgement response to an invalidation request */\
     X(AckPut)           /* Acknowledgement response to a replacement (Put*) request */\
     /* HTM Commands */\
-    X(BeginTx)          /* NACK response to a message */\
-    X(EndTx)            /* Acknowledgement response to an invalidation request */\
-    X(AbortTx)          /* Send Abort back up the chain */ \
+    X(BeginTx)          /*  */\
+    X(EndTx)            /*  */\
+    X(AbortTx)          /*  */ \
+    X(HTMResp)          /*  */ \
+    X(CommitResp)       /* response for a successful transactional event */\
+    X(AbortResp)        /* response for an unsuccessful transactional event */\
     X(LAST_CMD)
 
 /** Valid commands for the MemEvent */
@@ -394,52 +397,63 @@ public:
     /** Returns true if this is a Data Request */
     static bool isDataRequest(Command cmd) { return (cmd == GetS || cmd == GetX || cmd == GetSEx || cmd == FetchInv || cmd == FetchInvX || cmd == Fetch); }
     bool isDataRequest(void) const { return MemEvent::isDataRequest(cmd_); }
+
     /** Returns true if this is of cpu type */
     static bool isCPURequest(Command cmd) { return (cmd == GetS || cmd == GetX || cmd == GetSEx);}
     bool isCPURequest(void) const { return MemEvent::isCPURequest(cmd_); }
+
     /** Returns true if this is of response type */
-    static bool isResponse(Command cmd) { return (cmd == GetSResp || cmd == GetXResp || cmd == FlushLineResp);}
+    static bool isResponse(Command cmd) { return (cmd == GetSResp || cmd == GetXResp || cmd == FlushLineResp || cmd == HTMResp || cmd == CommitResp || cmd == AbortResp);}
     bool isResponse(void) const { return MemEvent::isResponse(cmd_); }
+
     /** Returns true if this is a 'writeback' command type */
     static bool isWriteback(Command cmd) { return (cmd == PutM || cmd == PutE || cmd == PutS); }
     bool isWriteback(void) const { return MemEvent::isWriteback(cmd_); }
-   
 
-    
     void setDirty(bool status) { dirty_ = status; }
     bool getDirty() { return dirty_; }
 
     /** @return the source string - who sent this MemEvent */
     const std::string& getSrc(void) const { return src_; }
+
     /** Sets the source string - who sent this MemEvent */
     void setSrc(const std::string& src) { src_ = src; }
+
     /** @return the destination string - who receives this MemEvent */
     const std::string& getDst(void) const { return dst_; }
+
     /** Sets the destination string - who received this MemEvent */
     void setDst(const std::string& dst) { dst_ = dst; }
+
     /** @return the requestor string - whose original request caused this MemEvent */
     const std::string& getRqstr(void) const { return rqstr_; }
+
     /** Sets the requestor string - whose original request caused this MemEvent */
     void setRqstr(const std::string& rqstr) { rqstr_ = rqstr; }
 
     /** @returns the state of all flags for this MemEvent */
     uint32_t getFlags(void) const { return flags_; }
+
     /** Sets the specified flag.
      * @param[in] flag  Should be one of the flags beginning with F_,
      *                  defined in MemEvent */
     void setFlag(uint32_t flag) { flags_ = flags_ | flag; }
+
     /** Clears the speficied flag.
      * @param[in] flag  Should be one of the flags beginning with F_,
      *                  defined in MemEvent */
     void clearFlag(uint32_t flag) { flags_ = flags_ & (~flag); }
+
     /** Clears all flags */
     void clearFlags(void) { flags_ = 0; }
+
     /** Check to see if a flag is set.
      * @param[in] flag  Should be one of the flags beginning with F_,
      *                  defined in MemEvent
      * @returns TRUE if the flag is set, FALSE otherwise
      */
     bool queryFlag(uint32_t flag) const { return flags_ & flag; };
+
     /** Sets the entire flag state */
     void setFlags(uint32_t flags) { flags_ = flags; }
 
@@ -465,6 +479,12 @@ public:
             case FlushLine:
             case FlushLineInv:
                 return FlushLineResp;
+            case BeginTx:
+                return HTMResp;
+            case EndTx:
+                return CommitResp;
+            case AbortTx:
+                return AbortResp;
             default:
                 return NULLCMD;
         }
