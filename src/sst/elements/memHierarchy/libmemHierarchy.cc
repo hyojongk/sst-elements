@@ -1073,7 +1073,7 @@ static const ElementInfoParam bridge_params[] = {
 };
 
 static const ElementInfoSubComponent subcomponents[] = {
-    {src/sst/elements/memHierarchy/libmemHierarchy.cc
+    {
         "simpleMemBackendConvertor",
         "convert MemEvent to base mem backend",
         NULL, /* Advanced help */
