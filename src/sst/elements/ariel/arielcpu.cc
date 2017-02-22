@@ -334,23 +334,23 @@ ArielCPU::ArielCPU(ComponentId_t id, Params& params) :
 	output->verbose(CALL_INFO, 1, 0, "Configuring cores and cache links...\n");
 	char* link_buffer = (char*) malloc(sizeof(char) * 256);
 	for(uint32_t i = 0; i < core_count; ++i) {
-		sprintf(link_buffer, "cache_link_%" PRIu32, i);
+            sprintf(link_buffer, "cache_link_%" PRIu32, i);
 
-		cpu_cores[i] = new ArielCore(tunnel, NULL, i, maxPendingTransCore, output,
-			maxIssuesPerCycle, maxCoreQueueLen, cacheLineSize, this,
-			memmgr, perform_checks, params);
-        cpu_to_cache_links[i] = dynamic_cast<SimpleMem*>(loadModuleWithComponent("memHierarchy.memInterface", this, params));
-        cpu_to_cache_links[i]->initialize(link_buffer, new SimpleMem::Handler<ArielCore>(cpu_cores[i], &ArielCore::handleEvent));
+            cpu_cores[i] = new ArielCore(tunnel, NULL, i, maxPendingTransCore, output,
+                    maxIssuesPerCycle, maxCoreQueueLen, cacheLineSize, this,
+                    memmgr, perform_checks, params);
 
+            cpu_to_cache_links[i] = dynamic_cast<SimpleMem*>(loadModuleWithComponent("memHierarchy.memInterface", this, params));
+            cpu_to_cache_links[i]->initialize(link_buffer, new SimpleMem::Handler<ArielCore>(cpu_cores[i], &ArielCore::handleEvent));
 
-                // optionally wire up links to allocate trackers (e.g. memSieve)
-                if (useAllocTracker) {
-                    sprintf(link_buffer, "alloc_link_%" PRIu32, i);
-                    cpu_to_alloc_tracker_links[i] = configureLink(link_buffer);
-                    cpu_cores[i]->setCacheLink(cpu_to_cache_links[i], cpu_to_alloc_tracker_links[i]);
-                } else {
-                    cpu_cores[i]->setCacheLink(cpu_to_cache_links[i], 0);
-                }
+            // optionally wire up links to allocate trackers (e.g. memSieve)
+            if (useAllocTracker) {
+                sprintf(link_buffer, "alloc_link_%" PRIu32, i);
+                cpu_to_alloc_tracker_links[i] = configureLink(link_buffer);
+                cpu_cores[i]->setCacheLink(cpu_to_cache_links[i], cpu_to_alloc_tracker_links[i]);
+            } else {
+                cpu_cores[i]->setCacheLink(cpu_to_cache_links[i], 0);
+            }
 	}
 	free(link_buffer);
 
