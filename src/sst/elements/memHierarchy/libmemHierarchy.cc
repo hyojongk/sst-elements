@@ -31,6 +31,7 @@
 #include "dmaEngine.h"
 #include "memHierarchyInterface.h"
 #include "memNIC.h"
+#include "HTM.h"
 #include "coherenceController.h"
 #include "MESICoherenceController.h"
 #include "MESIInternalDirectory.h"
@@ -94,13 +95,13 @@ static const ElementInfoParam cache_params[] = {
     {"associativity",           "Required, int - Associativity of the cache. In set associative mode, this is the number of ways."},
     {"access_latency_cycles",   "Required, int - Latency (in cycles) to access the cache data array. This latency is paid by cache hits and coherence requests that need to return data."},
     {"L1",                      "Required, bool - Required for L1s, specifies whether cache is an L1. Options: 0[not L1], 1[L1]", "false"},
+    {"tm_cache",                "Stuff goes here", "false"},
     /* Not required */
     {"cache_line_size",         "Optional, int - Size of a cache line (aka cache block) in bytes.", "64"},
     {"hash_function",           "Optional, int - 0 - none (default), 1 - linear, 2 - XOR", "0"},
     {"coherence_protocol",      "Optional, string - Coherence protocol. Options: MESI, MSI, NONE", "MESI"},
     {"replacement_policy",      "Optional, string - Replacement policy of the cache array. Options:  LRU[least-recently-used], LFU[least-frequently-used], Random, MRU[most-recently-used], or NMRU[not-most-recently-used]. ", "lru"},
     {"cache_type",              "Optional, string - Cache type. Options: inclusive cache ('inclusive', required for L1s), non-inclusive cache ('noninclusive') or non-inclusive cache with a directory ('noninclusive_with_directory', required for non-inclusive caches with multiple upper level caches directly above them),", "inclusive"},
-    {"htm_support",            "stuff goes here", "false"},
     {"max_requests_per_cycle",  "Maximum number of requests to accept per cycle. 0 or negative is unlimited.", "-1"},
     {"request_link_width",      "Optional, string - Limits number of request bytes sent per cycle. Use 'B' units. '0B' is unlimited.", "0B"},
     {"response_link_width",     "Optional, string - Limits number of response bytes sent per cycle. Use 'B' units. '0B' is unlimited.", "0B"},
@@ -548,6 +549,38 @@ static const ElementInfoStatistic sieve_statistics[] = {
 };
 
 
+/*************** HTM Inst ***************/
+static Component* create_HTM(ComponentId_t id, Params& params)
+{
+     return new HTM(id, params);
+}
+
+static const ElementInfoParam htm_params[] = {
+    /* Required */
+    {"cache_size",              "Required, string - Cache size with units. Eg. 4KiB or 1MiB"},
+    {"cache_line_size",         "Optional, int - Size of a cache line (aka cache block) in bytes."},
+    /* Not required */
+    {"associativity",           "Required, int - Associativity of the cache. In set associative mode, this is the number of ways."},
+    {"debug",                   "Optional, int - Print debug information. Options: 0[no output], 1[stdout], 2[stderr], 3[file]", "0"},
+    {"debug_level",             "Optional, int - Debugging/verbosity level. Between 0 and 10", "0"},
+    {NULL, NULL, NULL}
+};
+
+static const ElementInfoPort htm_ports[] = {
+    {"cpu_htm_link", "Ports connected to the CPUs", memEvent_port_events},
+    {"htm_cache_link", "Link to cache", memEvent_port_events},
+    {NULL, NULL, NULL}
+};
+
+static const ElementInfoStatistic htm_statistics[] = {
+    {"ReadSetSize",     "Number of read requests that hit in the sieve", "count", 1},
+    {"WriteSetSize",    "Number of read requests that missed in the sieve", "count", 1},
+    {"NumAborts",       "Number of write requests that hit in the sieve", "count", 1},
+    {"NumCommits",      "Number of write requests that missed in the sieve", "count", 1},
+    {NULL, NULL, NULL, 0},
+};
+
+/* ---------------------------------------------------------------------- */
 
 static Component* create_Bus(ComponentId_t id, Params& params)
 {
@@ -1040,7 +1073,7 @@ static const ElementInfoParam bridge_params[] = {
 };
 
 static const ElementInfoSubComponent subcomponents[] = {
-    {
+    {src/sst/elements/memHierarchy/libmemHierarchy.cc
         "simpleMemBackendConvertor",
         "convert MemEvent to base mem backend",
         NULL, /* Advanced help */
@@ -1358,6 +1391,15 @@ static const ElementInfoComponent components[] = {
             broadcastShim_ports,
             COMPONENT_CATEGORY_MEMORY,
             NULL
+        },
+        {   "HTM",
+            "things and stuff and such...",
+            NULL,
+            create_HTM,
+            htm_params,
+            htm_ports,
+            COMPONENT_CATEGORY_MEMORY,
+            htm_statistics
         },
 	{   "Bus",
 	    "Mem Hierarchy Bus Component",
