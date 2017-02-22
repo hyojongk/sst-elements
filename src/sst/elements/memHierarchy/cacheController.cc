@@ -79,7 +79,7 @@ void Cache::processCacheRequest(MemEvent* event, Command cmd, Addr baseAddr, boo
     printLine(baseAddr);
 #endif
     bool updateLine = !replay && MemEvent::isDataRequest(cmd);   /* TODO: move replacement manager update to time when cache actually sends a response */
-    CacheLine * line = cf_.cacheArray_->lookup(baseAddr, updateLine);; 
+    CacheLine * line = cf_.cacheArray_->lookup(baseAddr, updateLine);
     
     bool miss = (line == nullptr);
 #ifdef __SST_DEBUG_OUTPUT__
