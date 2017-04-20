@@ -71,6 +71,8 @@
 #include "membackend/pagedMultiBackend.h"
 #endif
 
+#include "membackend/pagedMultiBackend2.h"
+
 #ifdef HAVE_LIBHYBRIDSIM
 #include "membackend/hybridSimBackend.h"
 #endif
@@ -1054,6 +1056,45 @@ static const ElementInfoStatistic pagedMultiMem_statistics[] = {
 
 
 /*****************************************************************************************
+ *  SubComponent: pagedMultiMemory2 Purpose: Version 2 Memory backend,
+ *  implements both HMC and NVRAM (via Messier) and simulates caching
+ *  between them
+ *****************************************************************************************/
+static SubComponent* create_Mem_pagedMulti2(Component* comp, Params& params){
+    return new pagedMultiMemory2(comp, params);
+}
+
+
+static const ElementInfoParam pagedMultiMem2_params[] = {
+    { "verbose",          "Sets the verbosity of the backend output", "0" },
+    {"collect_stats",      "Name of DRAMSim Device system file", "0"},
+    {"transfer_delay",      "Time (in ns) to transfer page to fast mem", "250"},
+    {"dramBackpressure",    "Don't issue page swaps if DRAM is too busy", "1"},
+    {"threshold",      "Threshold (touches/quantum)", "4"},
+    {"scan_threshold",      "scan Threshold (for SC strategies)", "4"},
+    {"seed",      "RNG Seed", "1447"},
+    {"page_add_strategy",      "Page Addition Strategy", "T"},
+    {"page_replace_strategy",      "Page Replacement Strategy", "FIFO"},
+    {"access_time", "Constant time memory access for \"fast\" memory", "35ns"},
+    {"max_fast_pages", "Number of \"fast\" (constant time) pages", "256"},
+    {"page_shift", "Size of page (2^x bytes)", "12"},
+    {"quantum", "time period for when page access counts is shifted", "5ms"},
+    {"accStatsPrefix","File name for acces pattern statistics",""},
+    {NULL, NULL, NULL}
+};
+
+static const ElementInfoStatistic pagedMultiMem2_statistics[] = {
+    {"fast_hits", "Number of accesses that 'hit' a fast page", "count", 1},
+    {"fast_swaps", "Number of pages swapped between 'fast' and 'slow' memory", "count", 1},
+    {"fast_acc", "Number of total accesses to the memory backend", "count", 1},
+    {"t_pages", "Number of total pages", "count", 1},
+    {"cant_swap", "Number of times a page could not be swapped in because no victim page could be found because all candidates were swapping", "count", 1},
+    {"swap_delays", "Number of an access is delayed because the page is swapping", "count", 1},
+    { NULL, NULL, NULL, 0 }
+};
+
+
+/*****************************************************************************************
  *  SubComponent: hybridSimMemory
  *  Purpose: Memory backend, interface to HybridSim
  *****************************************************************************************/
@@ -1488,6 +1529,15 @@ static const ElementInfoSubComponent subcomponents[] = {
         "SST::MemHierarchy::MemBackend"
     },
 #endif
+    {
+        "pagedMulti2",
+        "Messier-driven memory timings with a fixed timing multi-level memory using paging",
+        NULL, /* Advanced help */
+        create_Mem_pagedMulti2, /* Module Alloc w/ params */
+        pagedMultiMem2_params,
+        pagedMultiMem2_statistics, /* statistics */
+        "SST::MemHierarchy::MemBackend"
+    },
 #if defined(HAVE_LIBHYBRIDSIM)
     {
         "hybridsim",

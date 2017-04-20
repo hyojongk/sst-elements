@@ -190,6 +190,10 @@ nobase_sst_HEADERS += membackend/pagedMultiBackend.h
 
 endif
 
+libmemHierarchy_la_SOURCES += membackend/pagedMultiBackend2.cc \
+	membackend/pagedMultiBackend2.h
+nobase_sst_HEADERS += membackend/pagedMultiBackend2.h
+
 if HAVE_HYBRIDSIM
 libmemHierarchy_la_LDFLAGS += $(HYBRIDSIM_LDFLAGS)
 libmemHierarchy_la_LIBADD += $(HYBRIDSIM_LIB)
