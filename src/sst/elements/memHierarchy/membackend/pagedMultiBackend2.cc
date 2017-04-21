@@ -17,6 +17,7 @@
 #include <sst_config.h>
 
 #include <limits>
+#include <algorithm>
 
 #include <sst/core/link.h>
 #include <sst/core/timeConverter.h>
