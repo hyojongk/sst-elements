@@ -571,7 +571,7 @@ void pagedMultiMemory2::handleMemCompReq(SST::Event *event){
         reqs.erase(reqI);
 
         // request id 0 is used internally  -- is that right?
-#warning we should actually generate proper ids
+#warning we should actually generate proper ids using generateUniqueId()
         if (id != 0) {
             assert(outToSlow.find( id ) != outToSlow.end());
             outToSlow.erase( id );
