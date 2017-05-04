@@ -31,7 +31,7 @@ using namespace SST;
 using namespace SST::MemHierarchy;
 using namespace SST::MemHierarchy::p2Info;
 
-pagedMultiMemory2::pagedMultiMemory2(Component *comp, Params &params) : SimpleMemBackend(comp, params), pagesInFast(0), lastMin(0) {
+pagedMultiMemory2::pagedMultiMemory2(Component *comp, Params &params) : SimpleMemBackend(comp, params), pagesInFast(0), lastMin(0), parent(comp) {
     dbg.init("@R:pagedMultiMemory2::@p():@l " + comp->getName() + ": ", 0, 0, 
              (Output::output_location_t)params.find<int>("debug", 0));
     dbg.output(CALL_INFO, "making pagedMultiMemory2 controller\n");
@@ -366,6 +366,9 @@ bool pagedMultiMemory2::issueRequest(ReqId id, Addr addr, bool isWrite, unsigned
     SimTime_t extraDelay = 0;
     auto &page = pageMap[pageAddr];
 
+    //std::cout << "iss " << addr << " " << id << " w:" << isWrite << endl;
+    //printf("%p iss %llx %llx w:%d\n", this, addr, id, isWrite);
+
     page.record(addr, isWrite, getRequestor(id), collectStats, pageAddr, replaceStrat == LFU8);
 
     if (maxFastPages > 0) {
@@ -407,19 +410,29 @@ void pagedMultiMemory2::clock(){
         Req *req = slowQ.front();
 
         // ugly hardcoded limit on outstanding reqs
-        bool couldInsert = (outToSlow.size() <= 64);
+        bool couldInsert = (outToSlow.size() <= 32);
 
         if (couldInsert) {
-            outToSlow.insert( req->id );
-            slowReqs[req->addr].push_back(req);
-            //printf("out: %llx %llx\n", req->addr, req->id);
-
             SST::MessierComponent::MemReqEvent *mreq = 
                 new SST::MessierComponent::MemReqEvent(req->id,
                                                        req->addr,
                                                        req->isWrite,
                                                        req->numBytes,
                                                        0);
+
+	    #warning I do not like this.
+	    if (req->id == 0) {
+	      static ReqId sr = 1;
+	      ReqId newID = mreq->setReqId(sr++);
+	      req->id = newID;
+	      //printf(" Gen %llx\n", newID);
+	    }
+
+            outToSlow.insert( req->id );
+            slowReqs[req->addr].push_back(req);
+            //printf("%p out: %llx %llx %u\n", this, req->addr, req->id, slowReqs[req->addr].size());
+
+
 
             slow_link->send( mreq );                            
             slowQ.pop();
@@ -554,6 +567,9 @@ void pagedMultiMemory2::handleMemCompReq(SST::Event *event){
         uint64_t addr = ev->getAddr();
         ReqId id = ev->getReqId();
 
+	if (slowReqs.find(addr) == slowReqs.end()) {
+	  //printf(">> %p %lx %lx\n", this, addr, id);
+	}
         assert(slowReqs.find(addr) != slowReqs.end());
         std::list<Req*> &reqs = slowReqs[addr];
         dbg.debug(_L10_, "Memory Request for %" PRIx64 " Finished [%zu reqs]\n", (Addr)addr, reqs.size());
@@ -567,7 +583,7 @@ void pagedMultiMemory2::handleMemCompReq(SST::Event *event){
                            [&]( const Req* rr ){ return rr->id == id; });
         assert(reqI != reqs.end());
         Req* req = *reqI;
-        //printf("ri %llx %llx i %lx reqs.size %ld\n", addr, req->id, id, reqs.size());
+        //printf("%p ri %llx %llx i %lx reqs.size %ld\n", this, addr, req->id, id, reqs.size());
         assert(req->id == id);
         reqs.erase(reqI);
 
@@ -578,8 +594,10 @@ void pagedMultiMemory2::handleMemCompReq(SST::Event *event){
             outToSlow.erase( id );
         }
         
-        if(0 == reqs.size())
-            slowReqs.erase(addr);
+        if(0 == reqs.size()) {
+	  //printf(" er %llx\n", addr);
+	  slowReqs.erase(addr);
+	}
         
         auto si = swapToSlow_Writes.find(req);
         auto si_r = swapToFast_Reads.find(req);

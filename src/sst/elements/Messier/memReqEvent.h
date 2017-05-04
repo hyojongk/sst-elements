@@ -38,6 +38,7 @@ class MemReqEvent : public SST::Event {
 	}
 
 	ReqId getReqId() { return reqId; }
+	ReqId setReqId(ReqId r) { reqId = r; return reqId; }
 	Addr getAddr() { return addr; }
 	bool getIsWrite() { return isWrite; }
 	unsigned  getNumBytes() { return numBytes; }

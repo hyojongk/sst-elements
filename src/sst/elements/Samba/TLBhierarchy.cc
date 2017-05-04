@@ -195,6 +195,8 @@ void TLBhierarchy::finish()
 	{
 		TLB_CACHE[level]->finish();
 	}
+	if(PTW)
+		PTW->finish();
 
 }
 

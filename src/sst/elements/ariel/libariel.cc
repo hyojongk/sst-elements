@@ -55,6 +55,7 @@ static SubComponent* load_ArielMemoryManagerMalloc(Component * owner, Params& pa
 static const ElementInfoStatistic ariel_statistics[] = {
     { "read_requests",        "Stat read_requests", "requests", 1},   // Name, Desc, Enable Level 
     { "write_requests",       "Stat write_requests", "requests", 1},
+    { "avg_requests",       "Stat requests", "requests", 1},
     { "split_read_requests",  "Stat split_read_requests", "requests", 1},
     { "split_write_requests", "Stat split_write_requests", "requests", 1},
     { "no_ops",               "Stat no_ops", "instructions", 1},
@@ -101,6 +102,7 @@ static const ElementInfoParam ariel_params[] = {
     {"arieltool", "Path to the Ariel PIN-tool shared library", ""},
     {"launcher", "Specify the launcher to be used for instrumentation, default is path to PIN", STRINGIZE(PINTOOL_EXECUTABLE)},
     {"executable", "Executable to trace", ""},
+    {"max_insts", "Maximum number of instructions reached by a thread","100000000"},
     {"launchparamcount", "Number of parameters supplied for the launch tool", "0" },
     {"launchparam%(launchparamcount)", "Set the parameter to the launcher", "" },
     {"envparamcount", "Number of environment parameters to supply to the Ariel executable, default=-1 (use SST environment)", "-1"},

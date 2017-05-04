@@ -34,6 +34,7 @@ Messier::Messier(Component *comp, Params &params) : SimpleMemBackend(comp,params
 	nvm_link = comp->configureLink( "cube_link", access_time,
 			new Event::Handler<Messier>(this, &Messier::handleMessierResp));
 
+	owner = comp;
 //	using std::placeholders::_1;
 //	using std::placeholders::_2;
 //	static_cast<MessierBackend*>(m_backend)->setResponseHandler( std::bind( &Messier::handleMemResponse, this, _1,_2 ) );
@@ -44,7 +45,7 @@ Messier::Messier(Component *comp, Params &params) : SimpleMemBackend(comp,params
 
 bool Messier::issueRequest(ReqId reqId, Addr addr, bool isWrite, unsigned numBytes ){
 	// TODO:  FIX THIS:  ugly hardcoded limit on outstanding requests
-	   if (outToNVM.size() > 64) {
+	   if (outToNVM.size() > 32) {
 	     return false;
 	   }
 	//  }
@@ -52,6 +53,8 @@ bool Messier::issueRequest(ReqId reqId, Addr addr, bool isWrite, unsigned numByt
 	//    if (outToCubes.find(reqId) != outToCubes.end())
 	//      output->fatal(CALL_INFO, -1, "Assertion failed");
 
+	//std::cout<<owner->getName()<<" "<<dec<<addr<<std::endl;
+	
 	outToNVM.insert( reqId );
 	nvm_link->send( new SST::MessierComponent::MemReqEvent(reqId,addr,isWrite,numBytes, 0) ); 
 	return true;
@@ -65,14 +68,16 @@ void Messier::handleMessierResp(SST::Event *event){
 
 	if (ev) {
 		if ( outToNVM.find( ev->getReqId() ) != outToNVM.end() ) {
+//			std::cout<<"Memory Controller received completion of reqID: "<< ev->getReqId() <<" Address: "<<ev->getAddr()<<std::endl;
 			outToNVM.erase( ev->getReqId() );
 			handleMemResponse( ev->getReqId() );
 			delete event;
 		} else {  
-			;// output->fatal(CALL_INFO, -1, "Could not match incoming request from cubes\n");
+			std::cout<<"Memory Controller received completion of reqID: "<< ev->getReqId() <<" Address: "<<ev->getAddr()<<std::endl;
+			 output->fatal(CALL_INFO, -1, "Could not match incoming request from cubes\n");
 		}
 	} else {
-		;// output->fatal(CALL_INFO, -1, "Recived wrong event type from cubes\n");
+		 output->fatal(CALL_INFO, -1, "Recived wrong event type from cubes\n");
 	}
 }
 

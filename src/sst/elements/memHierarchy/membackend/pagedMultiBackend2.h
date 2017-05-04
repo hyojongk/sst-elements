@@ -156,6 +156,7 @@ public:
 private:
     Output dbg;
     RNG::SSTRandom*  rng;
+    Component *parent;
 
     struct Req : public SST::Core::Serialization::serializable {
         Req( ReqId id, Addr addr, bool isWrite, unsigned numBytes ) :

@@ -93,6 +93,9 @@ PageTableWalker::PageTableWalker(int tlb_id, PageTableWalker * Next_level, int l
 	statPageTableWalkerHits = owner->registerStatistic<uint64_t>( "tlb_hits", subID);
 	statPageTableWalkerMisses = owner->registerStatistic<uint64_t>( "tlb_misses", subID );
 
+        histogram_idle = owner->registerStatistic<uint64_t>( "histogram_idle", subID);
+
+        histogram_idle2 = owner->registerStatistic<uint64_t>( "histogram_idle2", subID);
 	max_width = ((uint32_t) params.find<uint32_t>("max_width_PTWC", 4));
 
 	Owner = owner;
@@ -223,6 +226,10 @@ bool PageTableWalker::tick(SST::Cycle_t x)
 		SST::Event * ev = *st_1; 
 		uint64_t addr = ((MemEvent*) ev)->getVirtualAddress();
 
+
+		MISS_COUNT[addr/4096]++;
+
+		//std::cout<<hex<<addr/4096<<std::endl;
 
 		// Those track if any hit in one of the supported pages' structures
 		int hit_id=0;

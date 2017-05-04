@@ -46,6 +46,8 @@ ArielCPU::ArielCPU(ComponentId_t id, Params& params) :
 	output = new SST::Output("ArielComponent[@f:@l:@p] ",
 		verbosity, 0, SST::Output::STDOUT);
 
+	 long long int max_insts = (uint64_t) params.find<uint64_t>("max_insts", 0);
+
         // see if we should send allocation events out on links
 	useAllocTracker = params.find<int>("alloctracker", 0);
 
@@ -341,7 +343,7 @@ ArielCPU::ArielCPU(ComponentId_t id, Params& params) :
         cpu_to_cache_links[i] = dynamic_cast<SimpleMem*>(loadModuleWithComponent("memHierarchy.memInterface", this, params));
         cpu_to_cache_links[i]->initialize(link_buffer, new SimpleMem::Handler<ArielCore>(cpu_cores[i], &ArielCore::handleEvent));
 
-
+		 cpu_cores[i]->setMaxInsts(max_insts);
                 // optionally wire up links to allocate trackers (e.g. memSieve)
                 if (useAllocTracker) {
                     sprintf(link_buffer, "alloc_link_%" PRIu32, i);

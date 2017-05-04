@@ -27,6 +27,7 @@ ArielCore::ArielCore(ArielTunnel *tunnel, SimpleMem* coreToCacheLink,
 	output(out), tunnel(tunnel), perform_checks(perform_address_checks),
 	verbosity(static_cast<uint32_t>(out->getVerboseLevel()))
 {
+	inst_count = 0;
 	output->verbose(CALL_INFO, 2, 0, "Creating core with ID %" PRIu32 ", maximum queue length=%" PRIu32 ", max issue is: %" PRIu32 "\n", thisCoreID, maxQLen, maxIssuePerCyc);
 	cacheLink = coreToCacheLink;
         allocLink = 0;
@@ -46,6 +47,7 @@ ArielCore::ArielCore(ArielTunnel *tunnel, SimpleMem* coreToCacheLink,
 	char* subID = (char*) malloc(sizeof(char) * 32);
 	sprintf(subID, "%" PRIu32, thisCoreID);
 
+	avg_requests  = own->registerStatistic<uint64_t>( "avg_requests", subID );
 	statReadRequests  = own->registerStatistic<uint64_t>( "read_requests", subID );
 	statWriteRequests = own->registerStatistic<uint64_t>( "write_requests", subID );
 	statSplitReadRequests = own->registerStatistic<uint64_t>( "split_read_requests", subID );
@@ -333,6 +335,10 @@ bool ArielCore::refillQueue() {
 
             // Add one to our instruction counts
 	    statInstructionCount->addData(1);
+	     inst_count++;
+		if(inst_count%100000==0)
+			std::cout<<coreID<<": Instruction count is inst_count : "<<inst_count<<std::endl;
+
 
             break;
 
@@ -652,20 +658,43 @@ bool ArielCore::processNextEvent() {
 	}
 }
 
+
+
+bool init_req=false;
 void ArielCore::tick() {
-	if(! isHalted) {
-		ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Ticking core id %" PRIu32 "\n", coreID));
-		for(uint32_t i = 0; i < maxIssuePerCycle; ++i) {
-			bool didProcess = processNextEvent();
 
-			// If we didnt process anything in the call or we have halted then
-			// we stop the ticking and return
-			if( (!didProcess) || isHalted) {
-				break;
-			}
-		}
+        if(! isHalted) {
+                ARIEL_CORE_VERBOSE(16, output->verbose(CALL_INFO, 16, 0, "Ticking core id %" PRIu32 "\n", coreID));
+                 int count=0;
+                for(uint32_t i = 0; i < maxIssuePerCycle; ++i) {
+                        bool didProcess = processNextEvent();
 
-		currentCycles++;
-	}
+                        if( (!didProcess) || isHalted) {
+                                break;
+                        }
+                        if(didProcess)
+                                count++;
+
+                }
+
+
+                if(count>=1)
+                  init_req=true;
+
+                if(init_req)
+                avg_requests->addData(1);
+
+                if(init_req)
+                   currentCycles++;
+        }
+
+
+        if(inst_count >= max_insts && (max_insts!=0) && (coreID==0))
+                isHalted=true;
+	//else if( coreID==0 && (inst_count%100==0))
+	//	std::cout<<"This is instruction number "<<inst_count<<std::endl;
+		
+
 }
+
 

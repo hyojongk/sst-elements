@@ -107,7 +107,42 @@ class PageTableWalker
 	// Does the translation and updating the statistics of miss/hit
 	long long int translate(long long int vadd);
 
-	void finish(){}
+	void finish(){
+	
+	 std::map<long long int, int>::iterator st, en;
+	 st = MISS_COUNT.begin();
+	 en = MISS_COUNT.end();
+	 
+	 while(st!=en)
+	 {
+		int bin = 0;
+		if(st->second < 10)
+		  bin =0;
+		else if(st->second < 50)
+		  bin = 1;
+		else if(st->second < 100)
+		  bin = 2;
+		else if(st->second < 200)
+		  bin = 3;
+		else if(st->second < 500)
+		  bin = 4;
+		else if(st->second < 1000)
+		  bin = 5;
+		else if(st->second < 5000)
+		  bin = 6;
+		else 
+		  bin =7;
+		
+	       	
+                histogram_idle->addData(bin);
+		
+		for(int i=0; i < st->second ; i++)
+                histogram_idle2->addData(bin);
+
+		st++;
+	 }
+
+         }
 
 	void set_ToMem(SST::Link * l) { to_mem = l;} 
 
@@ -130,6 +165,7 @@ class PageTableWalker
 	std::map<long long int, int> WSR_COUNT;
 	std::map<long long int, bool> WSR_READY;
 
+	std::map<long long int, int> MISS_COUNT;
 	std::map<long long int, long long int> WID_Add;
 
 	std::map<long long int, SST::Event *> WID_EV;
@@ -142,6 +178,9 @@ class PageTableWalker
 
 	Statistic<uint64_t>* statPageTableWalkerMisses;
 
+	 Statistic<uint64_t>* histogram_idle;
+
+	 Statistic<uint64_t>* histogram_idle2;
 
 	int getHits(){return hits;}
 	int getMisses(){return misses;}

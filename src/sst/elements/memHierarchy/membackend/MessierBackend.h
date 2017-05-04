@@ -34,6 +34,7 @@ namespace SST {
 				SST::Link *cube_link;
 				std::set<ReqId> outToNVM;
 				SST::Link *nvm_link;
+				Component * owner;
 
 		};
 

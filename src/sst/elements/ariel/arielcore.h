@@ -93,8 +93,12 @@ class ArielCore {
 
 		void printCoreStatistics();
 		void printTraceEntry(const bool isRead, const uint64_t address, const uint32_t length);
+		void setMaxInsts(long long int i){max_insts=i;}
+
 
 	private:
+
+		long long int inst_count;
 		bool processNextEvent();
 		bool refillQueue();
 		uint32_t coreID;
@@ -115,7 +119,7 @@ class ArielCore {
 		const uint32_t perform_checks;
 		bool enableTracing;
 		uint64_t currentCycles;
-
+		long long int max_insts;
 		ArielTraceGenerator* traceGen;
 
 		Statistic<uint64_t>* statReadRequests;
@@ -133,6 +137,8 @@ class ArielCore {
 		Statistic<uint64_t>* statFPSPSIMDIns;
 		Statistic<uint64_t>* statFPSPScalarIns;
 		Statistic<uint64_t>* statFPSPOps;
+
+		Statistic<uint64_t>* avg_requests;
 
 		uint64_t pending_transaction_count;
 

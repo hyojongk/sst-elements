@@ -40,6 +40,8 @@ static const ElementInfoStatistic Samba_statistics[] = {
     { "write_requests",       "Stat write_requests", "requests", 1},
     { "tlb_shootdown",        "Number of TLB clears because of page-frees", "shootdowns", 2 },
     { "tlb_page_allocs",      "Number of pages allocated by the memory manager", "pages", 2 },
+    { "histogram_idle", "The histogram of cycles length while controller is idle", "cycles",1},
+    { "histogram_idle2", "The histogram of cycles length while controller is idle", "cycles",1},
     { NULL, NULL, NULL, 0 }
 };
 
