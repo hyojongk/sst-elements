@@ -13,11 +13,10 @@
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
-#include "sst_config.h"
-
-#include <sst/core/element.h>
+#include <sst_config.h>
 #include "crossSim.h"
 
+#include <sst/core/element.h>
 #include <assert.h>
 #include "sst/core/event.h"
 
@@ -169,10 +168,10 @@ bool crossSimComponent::clockTic( Cycle_t )
 // Element Libarary / Serialization stuff
     
 
+
 /*
   Needed temporarily because the Factory doesn't know if this is an
   SST library without it.
- */
 
 extern "C" {
     ElementLibraryInfo crossSim_eli = {
@@ -188,4 +187,5 @@ extern "C" {
         NULL // generators,
     };
 }
+ */
 

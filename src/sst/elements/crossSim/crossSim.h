@@ -16,8 +16,10 @@
 #ifndef _CROSSSIM_H
 #define _CROSSSIM_H
 
+#include <sst/core/clock.h>
 #include <sst/core/component.h>
 #include <sst/core/elementinfo.h>
+#include <sst/core/sst_types.h>
 #include <sst/core/link.h>
 #include <sst/core/rng/marsaglia.h>
 
@@ -56,8 +58,10 @@ private:
     SST::Link* E;
     SST::Link* W;
 
-private:
+public:
     SST_ELI_REGISTER_COMPONENT(crossSimComponent,"crossSim","crossSimComponent","Model of an neural node using cross sim",COMPONENT_CATEGORY_PROCESSOR)
+
+    SST_ELI_DOCUMENT_VERSION(0,1,0)
 
     SST_ELI_DOCUMENT_PARAMS(
         {"workPerCycle",  ".", NULL},
@@ -76,6 +80,8 @@ private:
         {"Wlink",     "Network Link",  {} },
     )
 
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
+    )
 };
 
 } // namespace crossSim
