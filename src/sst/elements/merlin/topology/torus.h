@@ -40,7 +40,7 @@ public:
     topo_torus_event() {}
     topo_torus_event(int dim) {	dimensions = dim; routing_dim = 0; dest_loc = new int[dim]; }
     ~topo_torus_event() { delete[] dest_loc; }
-    virtual internal_router_event* clone(void)
+    virtual internal_router_event* clone(void) override
     {
         topo_torus_event* tte = new topo_torus_event(*this);
         tte->dest_loc = new int[dimensions];
@@ -48,7 +48,7 @@ public:
         return tte;
     }
 
-    void serialize_order(SST::Core::Serialization::serializer &ser) {
+    void serialize_order(SST::Core::Serialization::serializer &ser)  override {
         internal_router_event::serialize_order(ser);
         ser & dimensions;
         ser & routing_dim;
@@ -108,6 +108,8 @@ private:
 
     SST_ELI_REGISTER_SUBCOMPONENT(topo_torus,"merlin","torus","Multi-dimensional torus topology object","SST::Merlin::Topology")
     
+    SST_ELI_DOCUMENT_VERSION(1,0,0)
+
     SST_ELI_DOCUMENT_PARAMS(
         {"torus:shape","Shape of the torus specified as the number of routers in each dimension, where each dimension is separated by an x.  For example, 4x4x2x2.  Any number of dimensions is supported."},
         {"torus:width","Number of links between routers in each dimension, specified in same manner as for shape.  For example, 2x2x1 denotes 2 links in the x and y dimensions and one in the z dimension."},
@@ -120,6 +122,8 @@ private:
     SST_ELI_DOCUMENT_PORTS(
     )
 
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
+    )
 
 };
 

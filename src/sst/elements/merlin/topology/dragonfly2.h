@@ -139,6 +139,8 @@ private:
 
     SST_ELI_REGISTER_SUBCOMPONENT(topo_dragonfly2,"merlin","dragonfly2","Dragonfly2 topology object.  Implements a dragonfly with a single all to all pattern within the group.","SST::Merlin::Topology")
     
+    SST_ELI_DOCUMENT_VERSION(1,0,0)
+
     SST_ELI_DOCUMENT_PARAMS(
         {"dragonfly:hosts_per_router","Number of hosts connected to each router."},
         {"dragonfly:routers_per_group","Number of links used to connect to routers in same group."},
@@ -157,6 +159,8 @@ private:
     SST_ELI_DOCUMENT_PORTS(
     )
 
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
+    )
 
 };
 
@@ -175,12 +179,12 @@ public:
     topo_dragonfly2_event(const topo_dragonfly2::dgnfly2Addr &dest) : dest(dest) {}
     ~topo_dragonfly2_event() { }
 
-    virtual internal_router_event *clone(void)
+    virtual internal_router_event *clone(void) override
     {
         return new topo_dragonfly2_event(*this);
     }
 
-    void serialize_order(SST::Core::Serialization::serializer &ser) {
+    void serialize_order(SST::Core::Serialization::serializer &ser)  override {
         internal_router_event::serialize_order(ser);
         ser & src_group;
         ser & dest.group;

@@ -67,6 +67,8 @@ private:
 
     SST_ELI_REGISTER_COMPONENT(pt2pt_test,"merlin","pt2pt_test","Simple NIC to test basic pt2pt performance.",COMPONENT_CATEGORY_NETWORK)
     
+    SST_ELI_DOCUMENT_VERSION(0,9,0)
+
     SST_ELI_DOCUMENT_PARAMS(
         {"id","Network ID of endpoint."},
         {"num_vns","Number of requested virtual networks."},
@@ -83,6 +85,8 @@ private:
         {"rtr",  "Port that hooks up to router.", { "merlin.RtrEvent", "merlin.credit_event" } }
     )
 
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
+    )
 
 };
 
@@ -93,7 +97,7 @@ class pt2pt_test_event : public Event {
 
     pt2pt_test_event() {}
     
-    virtual Event* clone(void)
+    virtual Event* clone(void) override
     {
         return new pt2pt_test_event(*this);
     }

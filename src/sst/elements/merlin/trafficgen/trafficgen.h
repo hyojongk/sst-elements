@@ -310,6 +310,8 @@ protected:
 
     SST_ELI_REGISTER_COMPONENT(TrafficGen,"merlin","trafficgen","Pattern-based traffic generator.",COMPONENT_CATEGORY_NETWORK)
     
+    SST_ELI_DOCUMENT_VERSION(1,0,0)
+
     SST_ELI_DOCUMENT_PARAMS(
         {"id","Network ID of endpoint."},
         {"num_peers","Total number of endpoints in network."},
@@ -359,6 +361,9 @@ protected:
 
     SST_ELI_DOCUMENT_PORTS(
         {"rtr",  "Port that hooks up to router.", { "merlin.RtrEvent", "merlin.credit_event" } }
+    )
+
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
     )
 };
 

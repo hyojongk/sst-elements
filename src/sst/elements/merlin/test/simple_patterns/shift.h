@@ -77,6 +77,8 @@ private:
 
     SST_ELI_REGISTER_COMPONENT(shift_nic,"merlin","shift_nic","Simple pattern NIC doing a shift pattern.",COMPONENT_CATEGORY_NETWORK)
     
+    SST_ELI_DOCUMENT_VERSION(0,9,0)
+
     SST_ELI_DOCUMENT_PARAMS(
         {"id","Network ID of endpoint."},
         {"num_peers","Total number of endpoints in network."},
@@ -94,6 +96,8 @@ private:
         {"rtr",  "Port that hooks up to router.", { "merlin.RtrEvent", "merlin.credit_event" } }
     )
 
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
+    )
 
 };
 

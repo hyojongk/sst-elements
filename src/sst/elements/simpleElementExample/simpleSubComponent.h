@@ -16,7 +16,10 @@
 #ifndef _SIMPLESUBCOMPONENT_H
 #define _SIMPLESUBCOMPONENT_H
 
+#include<vector>
+
 #include <sst/core/component.h>
+#include <sst/core/elementinfo.h>
 #include <sst/core/subcomponent.h>
 #include <sst/core/link.h>
 
@@ -42,8 +45,31 @@ public:
 private:
 
     bool tick(SST::Cycle_t);
-    SubCompInterface* subComp;
+    std::vector<SubCompInterface*> subComps;
 
+    // REGISTER THIS COMPONENT INTO THE ELEMENT LIBRARY
+    SST_ELI_REGISTER_COMPONENT(SubComponentLoader,
+                               "simpleElementExample",
+                               "SubComponentLoader",
+                               "Demonstrates subcomponents",
+                               COMPONENT_CATEGORY_UNCATEGORIZED
+    )
+
+    SST_ELI_DOCUMENT_VERSION(1,0,0)
+
+    SST_ELI_DOCUMENT_PARAMS(
+        {"clock", "Clock Rate", "1GHz"},
+    )
+
+    SST_ELI_DOCUMENT_STATISTICS(
+    )
+
+    SST_ELI_DOCUMENT_PORTS(
+    )
+
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
+        {"mySubComp", "Test slot", "SST::SimpleSubComponent::SubCompInterface" }
+    )
 };
 
 
@@ -58,6 +84,31 @@ public:
     ~SubCompSender() {}
     void clock(Cycle_t);
 
+    // REGISTER THIS SUB-COMPONENT INTO THE ELEMENT LIBRARY
+    SST_ELI_REGISTER_SUBCOMPONENT(
+        SubCompSender,
+        "simpleElementExample",
+        "SubCompSender",
+        "Sending Subcomponent",
+        "SST::simpleSubComponent::SubCompInterface"
+    )
+    
+    SST_ELI_DOCUMENT_VERSION(1,0,0)
+
+    SST_ELI_DOCUMENT_PARAMS(
+        {"sendCount", "Number of Messages to Send", "10"},
+    )
+
+    SST_ELI_DOCUMENT_STATISTICS(
+        {"numSent", "# of msgs sent", "", 1},
+    )
+
+    SST_ELI_DOCUMENT_PORTS(
+        {"sendPort", "Sending Port", { "simpleMessageGeneratorComponent.simpleMessage", "" } }
+    )
+    
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
+    )
 };
 
 
@@ -73,10 +124,35 @@ public:
     ~SubCompReceiver() {}
     void clock(Cycle_t);
 
+    // REGISTER THIS SUB-COMPONENT INTO THE ELEMENT LIBRARY
+    SST_ELI_REGISTER_SUBCOMPONENT(
+        SubCompReceiver,
+        "simpleElementExample",
+        "SubCompReceiver",
+        "Receiving Subcomponent",
+        "SST::simpleSubComponent::SubCompInterface"
+    )
+    
+    SST_ELI_DOCUMENT_VERSION(1,0,0)
+
+    SST_ELI_DOCUMENT_PARAMS(
+    )
+
+    SST_ELI_DOCUMENT_STATISTICS(
+        {"numRecv", "# of msgs sent", "", 1},
+    )
+
+    SST_ELI_DOCUMENT_PORTS(
+        {"recvPort", "Receiving Port", { "simpleMessageGeneratorComponent.simpleMessage", "" } }
+    )
+
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
+    )
 };
 
 } // namespace SimpleSubComponent
 } // namespace SST
+
 
 
 

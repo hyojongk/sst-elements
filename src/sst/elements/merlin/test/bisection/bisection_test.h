@@ -69,6 +69,8 @@ private:
     
     SST_ELI_REGISTER_COMPONENT(bisection_test,"merlin","bisection_test","Simple NIC to test bisection bandwidth of a network.",COMPONENT_CATEGORY_NETWORK)
     
+    SST_ELI_DOCUMENT_VERSION(0,9,0)
+
     SST_ELI_DOCUMENT_PARAMS(
         {"num_peers","Number of peers on the network (must be even number)"},
         {"link_bw","Bandwidth of the router link specified in either b/s or B/s (can include SI prefix).","2GB/s"},
@@ -84,6 +86,9 @@ private:
     SST_ELI_DOCUMENT_PORTS(
         {"rtr",  "Port that hooks up to router.", { "merlin.RtrEvent", "merlin.credit_event" } }
     )
+
+    SST_ELI_DOCUMENT_SUBCOMPONENT_SLOTS(
+    )
 };
 
 class bisection_test_event : public Event {
@@ -93,12 +98,12 @@ class bisection_test_event : public Event {
 
     bisection_test_event() {}
     
-    virtual Event* clone(void)
+    virtual Event* clone(void) override
     {
         return new bisection_test_event(*this);
     }
 
-    void serialize_order(SST::Core::Serialization::serializer &ser) {
+    void serialize_order(SST::Core::Serialization::serializer &ser)  override {
         Event::serialize_order(ser);
         ser & start_time;
     }
