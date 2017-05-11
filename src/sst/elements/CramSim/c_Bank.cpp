@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -34,8 +34,10 @@
 
 // CramSim includes
 #include "c_Bank.hpp"
+#include "c_Transaction.hpp"
 //#include "c_CmdReqEvent.hpp"
 #include "c_CmdResEvent.hpp"
+#include "c_BankCommand.hpp"
 
 using namespace SST;
 using namespace SST::n_Bank;
@@ -281,16 +283,16 @@ c_Bank::~c_Bank() {
 
 void c_Bank::handleCommand(c_BankCommand* x_bankCommandPtr) {
 
-//	std::cout << std::endl << "@" << std::dec
-//			<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
-//			<< __PRETTY_FUNCTION__ << std::endl;
-//	x_bankCommandPtr->print();
-//	std::cout << std::endl;
-//
-//	if (m_cmd) {
-//		std::cout << "m_cmd = ";
-//		m_cmd->print();
-//	}
+  //	std::cout << std::endl << "@" << std::dec
+  //			<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
+  //			<< __PRETTY_FUNCTION__ << std::endl;
+  //	x_bankCommandPtr->print();
+  //	std::cout << std::endl;
+  //
+  //	if (m_cmd) {
+  //		std::cout << "m_cmd = ";
+  //		m_cmd->print();
+  //	}
 
 	assert(nullptr == m_cmd);
 
@@ -381,10 +383,10 @@ c_BankCommand* c_Bank::clockTic() {
 			// waiting commands and delete the command
 			if (l_doSendRes) {
 
-//				std::cout << __PRETTY_FUNCTION__ << ": Sending cmd:"
-//						<< std::endl;
-//				m_cmd->print();
-//				std::cout << std::endl;
+			        //std::cout << __PRETTY_FUNCTION__ << ": Sending cmd:"
+				//		<< std::endl;
+				//m_cmd->print();
+				//std::cout << std::endl;
 
 				l_resPtr = m_cmd;
 				m_cmd = nullptr;
@@ -395,11 +397,11 @@ c_BankCommand* c_Bank::clockTic() {
 //				m_cmd->print();
 //				std::cout << std::endl;
 
-				c_Transaction* l_txnPtr = m_cmd->getTransaction();
-				const unsigned l_cmdsLeft = l_txnPtr->getWaitingCommands() - 1;
-				l_txnPtr->setWaitingCommands(l_cmdsLeft);
-				if (l_cmdsLeft == 0)
-					l_txnPtr->setResponseReady();
+			        //c_Transaction* l_txnPtr = m_cmd->getTransaction();
+				//const unsigned l_cmdsLeft = l_txnPtr->getWaitingCommands() - 1;
+				//l_txnPtr->setWaitingCommands(l_cmdsLeft);
+				//if (l_cmdsLeft == 0)
+				//	l_txnPtr->setResponseReady();
 
 				delete m_cmd;
 				m_cmd = nullptr;

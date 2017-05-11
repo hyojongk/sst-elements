@@ -1,8 +1,8 @@
-// Copyright 2013-2016 Sandia Corporation. Under the terms
+// Copyright 2013-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2013-2016, Sandia Corporation
+// Copyright (c) 2013-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -47,6 +47,7 @@ public:
         TypeMemory,             // memory - connected to directory or cache via network
         TypeDMAEngine,
         TypeSmartMemory,        // Sender and Receiver
+        TypeScratch,
         TypeOther
     };
 
@@ -100,7 +101,7 @@ public:
             Event(), event(ev)
         { }
 
-        virtual Event* clone(void) {
+        virtual Event* clone(void)  override {
             MemRtrEvent *mre = new MemRtrEvent(*this);
             mre->event = new MemEvent(*event);
             return mre;
@@ -109,7 +110,7 @@ public:
         virtual bool hasClientData() const { return true; }
 
     public:
-        void serialize_order(SST::Core::Serialization::serializer &ser) {
+        void serialize_order(SST::Core::Serialization::serializer &ser)  override {
             Event::serialize_order(ser);
             ser & event;
         }
@@ -138,14 +139,14 @@ public:
             src = addr;
         }
 
-        virtual Event* clone(void) {
+        virtual Event* clone(void)  override {
             return new InitMemRtrEvent(*this);
         }
 
-        virtual bool hasClientData() const { return false; }
+        virtual bool hasClientData() const override { return false; }
 
     public:
-        void serialize_order(SST::Core::Serialization::serializer &ser) {
+        void serialize_order(SST::Core::Serialization::serializer &ser)  override {
                 MemRtrEvent::serialize_order(ser);
                 ser & compType;
                 ser & address;
@@ -194,6 +195,7 @@ private:
     std::map<std::string, int> addrMap;
     /* Built during init -> available in Setup and later */
     std::vector<PeerInfo_t> peers;
+    std::unordered_map<std::string, MemNIC::ComponentTypeInfo> peerAddrs;
     /* Built during init -> available for lookups later */
     std::map<MemNIC::ComponentTypeInfo, std::string> destinations;
 
@@ -246,6 +248,8 @@ public:
     std::string findTargetDestination(Addr addr);
     // NOTE: does not clear the listing of destinations which are used for address lookups
     void clearPeerInfo(void) { peers.clear(); }
+    // Assuming addresses at the target 'dst' are linear, convert addr to it's target equivalent
+    Addr convertToDestinationAddress(const std::string &dst, Addr addr);
 
     // Callback function for linkControl
     bool recvNotify(int vn);

@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -36,6 +36,7 @@
 #include "c_BankStateIdle.hpp"
 #include "c_BankState.hpp"
 #include "c_BankCommand.hpp"
+#include "c_Transaction.hpp"
 #include "c_BankInfo.hpp"
 #include "c_BankStateActivating.hpp"
 #include "c_BankStateRefresh.hpp"
@@ -93,14 +94,14 @@ void c_BankStateIdle::clockTic(c_BankInfo* x_bank) {
 		if (1 == m_timer) {
 			if (m_prevCommandPtr) {
 				m_prevCommandPtr->setResponseReady();
-				const unsigned l_cmdsLeft =
-						m_prevCommandPtr->getTransaction()->getWaitingCommands()
-								- 1;
-				m_prevCommandPtr->getTransaction()->setWaitingCommands(
-						l_cmdsLeft);
+				//const unsigned l_cmdsLeft =
+				//		m_prevCommandPtr->getTransaction()->getWaitingCommands()
+				//				- 1;
+				//m_prevCommandPtr->getTransaction()->setWaitingCommands(
+				//		l_cmdsLeft);
 
-				if (l_cmdsLeft == 0)
-					m_prevCommandPtr->getTransaction()->setResponseReady();
+				//if (l_cmdsLeft == 0)
+				//	m_prevCommandPtr->getTransaction()->setResponseReady();
 
 			}
 		} else {

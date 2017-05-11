@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -32,16 +32,21 @@
 // C++ includes
 #include <memory>
 #include <list>
+#include <map>
+
+#include <sst/core/simulation.h>
 
 // CramSim includes
-#include "c_BankCommand.hpp"
+//#include "c_BankCommand.hpp"
 //#include "c_BankInfo.hpp"
 
 namespace SST {
 namespace n_Bank {
 
 class c_BankInfo;
-
+class c_BankCommand;
+enum class e_BankCommandType;
+  
 // Bankstates
 enum class e_BankState {
 	NONE, IDLE, ACTNG, ACTIVE, READ, READA, WRITE, WRITEA, PRE, REF

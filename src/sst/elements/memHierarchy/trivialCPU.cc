@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -30,7 +30,7 @@ using namespace SST::Statistics;
 trivialCPU::trivialCPU(ComponentId_t id, Params& params) :
     Component(id), rng(id, 13)
 {
-    requestsPendingCycle = new Histogram<uint64_t, uint64_t>("Requests Pending Per Cycle", 2);
+    requestsPendingCycle = registerStatistic<uint64_t>("pendCycle");
 
     // Restart the RNG to ensure completely consistent results 
     uint32_t z_seed = params.find<uint32_t>("rngseed", 7);
@@ -71,7 +71,7 @@ trivialCPU::trivialCPU(ComponentId_t id, Params& params) :
     registerAsPrimaryComponent();
     primaryComponentDoNotEndSim();
 
-    memory = dynamic_cast<Interfaces::SimpleMem*>(loadModuleWithComponent("memHierarchy.memInterface", this, params));
+    memory = dynamic_cast<Interfaces::SimpleMem*>(loadSubComponent("memHierarchy.memInterface", this, params));
     if ( !memory ) {
         out.fatal(CALL_INFO, -1, "Unable to load Module as memory\n");
     }
@@ -127,7 +127,7 @@ bool trivialCPU::clockTic( Cycle_t )
     ++clock_ticks;
 
     // Histogram bin the requests pending per cycle
-    requestsPendingCycle->add((uint64_t) requests.size());
+    requestsPendingCycle->addData((uint64_t) requests.size());
 
     // communicate?
     if ((0 != numLS) && (0 == (rng.generateNextUInt32() % commFreq))) {
@@ -149,7 +149,7 @@ bool trivialCPU::clockTic( Cycle_t )
                 uint32_t instNum = rng.generateNextUInt32() % 20;
                 uint64_t size = 4;
                 std::string cmdString = "Read";
-                if (do_write && 0 == instNum || 1 == instNum) {
+                if ((do_write && 0 == instNum) || 1 == instNum) {
                     cmd = Interfaces::SimpleMem::Request::Write;
                     cmdString = "Write";
                 } else if (do_flush && 2 == instNum) {

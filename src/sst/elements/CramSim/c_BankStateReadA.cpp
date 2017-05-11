@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -32,9 +32,12 @@
 #include <memory>
 #include <assert.h>
 
+#include <sst/core/simulation.h>
+
 #include "c_BankState.hpp"
 #include "c_BankInfo.hpp"
 #include "c_BankCommand.hpp"
+#include "c_Transaction.hpp"
 #include "c_BankStateReadA.hpp"
 
 using namespace SST;
@@ -118,11 +121,11 @@ void c_BankStateReadA::enter(c_BankInfo* x_bank, c_BankState* x_prevState,
 	m_prevCommandPtr = x_cmdPtr;
 	if (nullptr != m_prevCommandPtr) {
 		m_prevCommandPtr->setResponseReady();
-		const unsigned l_cmdsLeft =
-				m_prevCommandPtr->getTransaction()->getWaitingCommands() - 1;
-		m_prevCommandPtr->getTransaction()->setWaitingCommands(l_cmdsLeft);
-		if (l_cmdsLeft == 0)
-			m_prevCommandPtr->getTransaction()->setResponseReady();
+		//const unsigned l_cmdsLeft =
+		//		m_prevCommandPtr->getTransaction()->getWaitingCommands() - 1;
+		//m_prevCommandPtr->getTransaction()->setWaitingCommands(l_cmdsLeft);
+		//if (l_cmdsLeft == 0)
+		//	m_prevCommandPtr->getTransaction()->setResponseReady();
 
 		switch (m_prevCommandPtr->getCommandMnemonic()) {
 		case e_BankCommandType::READA:

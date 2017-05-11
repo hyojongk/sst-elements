@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -34,6 +34,7 @@
 
 #include "c_BankState.hpp"
 #include "c_BankCommand.hpp"
+#include "c_Transaction.hpp"
 #include "c_BankInfo.hpp"
 #include "c_BankStateActive.hpp"
 #include "c_BankStateWrite.hpp"
@@ -194,7 +195,9 @@ void c_BankStateWrite::clockTic(c_BankInfo* x_bank) {
 
 void c_BankStateWrite::enter(c_BankInfo* x_bank, c_BankState* x_prevState,
 		c_BankCommand* x_cmdPtr) {
-//	std::cout << "Entered " << __PRETTY_FUNCTION__ << std::endl;
+  //	std::cout << std::endl << "@" << std::dec
+  //			<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
+  //			<< __PRETTY_FUNCTION__ << std::endl;
 
 	m_timerExit = 0;
 	m_nextStatePtr = nullptr;
@@ -202,17 +205,17 @@ void c_BankStateWrite::enter(c_BankInfo* x_bank, c_BankState* x_prevState,
 	m_prevCommandPtr = x_cmdPtr;
 	if (nullptr != m_prevCommandPtr) {
 		m_prevCommandPtr->setResponseReady();
-		const unsigned l_cmdsLeft =
-				m_prevCommandPtr->getTransaction()->getWaitingCommands() - 1;
-		m_prevCommandPtr->getTransaction()->setWaitingCommands(l_cmdsLeft);
-		if (l_cmdsLeft == 0)
-			m_prevCommandPtr->getTransaction()->setResponseReady();
+		//const unsigned l_cmdsLeft =
+		//		m_prevCommandPtr->getTransaction()->getWaitingCommands() - 1;
+		//m_prevCommandPtr->getTransaction()->setWaitingCommands(l_cmdsLeft);
+		//if (l_cmdsLeft == 0)
+		//	m_prevCommandPtr->getTransaction()->setResponseReady();
 
-//		std::cout << std::endl << "@" << std::dec
-//				<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
-//				<< __PRETTY_FUNCTION__ << std::endl;
-//		m_prevCommandPtr->print();
-//		std::cout << std::endl;
+		//std::cout << std::endl << "@" << std::dec
+		//		<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
+		//		<< __PRETTY_FUNCTION__ << std::endl;
+		//m_prevCommandPtr->print();
+		//std::cout << std::endl;
 
 		switch (m_prevCommandPtr->getCommandMnemonic()) {
 		case e_BankCommandType::WRITE:

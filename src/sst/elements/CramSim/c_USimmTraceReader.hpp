@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -29,6 +29,8 @@
 
 //local includes
 #include "c_Transaction.hpp"
+
+typedef unsigned long ulong;
 
 using namespace std;
 
@@ -65,7 +67,7 @@ private:
 	c_USimmTraceReader(const c_USimmTraceReader&); //do not implement
 	void operator=(const c_USimmTraceReader&);
 
-	c_Transaction* getNextTransaction(std::string x_txnType, unsigned x_addr, unsigned x_dataWidth);
+	c_Transaction* getNextTransaction(std::string x_txnType, ulong x_addr, unsigned x_dataWidth);
 
 	void createTxn();
 
@@ -126,7 +128,6 @@ private:
 	// FIXME: Delete. Used for debugging queue size issues
 	unsigned* m_statsReqQ;
 	unsigned* m_statsResQ;
-
 
 };
 

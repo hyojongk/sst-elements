@@ -1,8 +1,8 @@
-// Copyright 2013-2016 Sandia Corporation. Under the terms
+// Copyright 2013-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright(c) 2013-2016, Sandia Corporation
+// Copyright(c) 2013-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -1647,7 +1647,7 @@ MemEvent::id_type DirectoryController::writebackData(MemEvent *data_event, Comma
     profileRequestSent(ev);
     
     /* We will get a response if this is a flush request */
-    memReqs[ev->getID()] = data_event->getBaseAddr();
+    if (!ev->isWriteback()) memReqs[ev->getID()] = data_event->getBaseAddr();
 
     uint64_t deliveryTime = timestamp + accessLatency;
     if (memLink) {
@@ -1681,7 +1681,7 @@ void DirectoryController::replayWaitingEvents(Addr addr) {
     if (mshr->isHit(addr)) {
         vector<mshrType> replayEntries = mshr->removeAll(addr);
         for (vector<mshrType>::reverse_iterator it = replayEntries.rbegin(); it != replayEntries.rend(); it++) {
-            MemEvent *ev = boost::get<MemEvent*>((*it).elem);
+            MemEvent *ev = ((*it).elem).getEvent();
 #ifdef __SST_DEBUG_OUTPUT__
             if (DEBUG_ALL || DEBUG_ADDR == addr) {
                 dbg.debug(_L5_, "Reactivating event. Cmd = %s, BaseAddr = 0x%" PRIx64 ", Addr = 0x%" PRIx64 "\n", CommandString[ev->getCmd()], ev->getBaseAddr(), ev->getAddr());

@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -21,6 +21,7 @@
 
 
 //local includes
+#include "c_Transaction.hpp"
 #include "c_TxnGenSeq.hpp"
 #include "c_TxnReqEvent.hpp"
 #include "c_TxnResEvent.hpp"
@@ -139,10 +140,10 @@ void c_TxnGenSeq::createTxn() {
 		c_Transaction* mTxn;
 		if (l_read2write < k_readWriteTxnRatio)
 			mTxn = new c_Transaction(m_seqNum, e_TransactionType::READ,
-							addr, 1);
+						 addr, 1);
 		else
 			mTxn = new c_Transaction(m_seqNum, e_TransactionType::WRITE, addr,
-					1);
+						 1);
 
 
 		m_txnReqQ.push(mTxn);

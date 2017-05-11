@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -61,7 +61,7 @@ class RecvMachine {
         void state_0( FireflyNetworkEvent* );
         void state_1( FireflyNetworkEvent* );
         void state_2( FireflyNetworkEvent* );
-        void state_3( SendEntry* );
+        void state_3( FireflyNetworkEvent*, SendEntry*  );
         void state_move_0( FireflyNetworkEvent* );
         void state_move_1( FireflyNetworkEvent*, bool );
         void checkNetwork();

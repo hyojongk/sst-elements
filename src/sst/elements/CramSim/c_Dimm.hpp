@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -37,11 +37,14 @@
 #include <sst/core/link.h>
 
 // local includes
-#include "c_BankCommand.hpp"
+//#include "c_BankCommand.hpp"
 #include "c_Bank.hpp"
 
 namespace SST {
 namespace n_Bank {
+
+  class c_BankCommand;
+  
 class c_Dimm: public SST::Component {
 public:
 
