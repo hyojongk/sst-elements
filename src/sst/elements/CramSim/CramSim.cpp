@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -15,9 +15,13 @@
 
 // SST includes
 #include "sst_config.h"
+
+#define SST_ELI_COMPILE_OLD_ELI_WITHOUT_DEPRECATION_WARNINGS
+
 #include "sst/core/element.h"
 
 // local includes
+#include "c_AddressHasher.hpp"
 #include "c_TxnGenSeq.hpp"
 #include "c_TxnGenRand.hpp"
 #include "c_TracefileReader.hpp"
@@ -38,6 +42,11 @@ using namespace SST::n_TxnDriver;
 using namespace SST::n_BankReceiver;
 
 /*----ALLOCATORS FOR COMPONENTS----*/
+
+static Component*
+create_c_AddressHasher(SST::ComponentId_t id, SST::Params& params) {
+	return new c_AddressHasher(id, params);
+}
 
 // c_TxnGenSeq
 static Component*
@@ -104,6 +113,21 @@ static Component*
 create_c_Dimm(SST::ComponentId_t id, SST::Params& params) {
 	return new c_Dimm(id, params);
 }
+
+/*----SETUP c_AddressHasher  STRUCTURES----*/
+static const ElementInfoParam c_AddressHasher_params[] = {
+		{"numChannelsPerDimm", "Total number of channels per DIMM", NULL},
+		{"numRanksPerChannel", "Total number of ranks per channel", NULL},
+		{"numBankGroupsPerRank", "Total number of bank groups per rank", NULL},
+		{"numBanksPerBankGroup", "Total number of banks per group", NULL},
+		{"numRowsPerBank" "Number of rows in every bank", NULL},
+		{"numColsPerBank", "Number of cols in every bank", NULL},
+		{"numBytesPerTransaction", "Number of bytes retrieved for every transaction", NULL},
+		{"strAddressMapStr","String defining the address mapping scheme",NULL},
+		{ NULL, NULL, NULL } };
+
+static const ElementInfoPort c_AddressHasher_ports[] = {
+		{ NULL, NULL, NULL } };
 
 /*----SETUP c_TxnGenSeq STRUCTURES----*/
 static const ElementInfoParam c_TxnGenSeq_params[] = {
@@ -184,24 +208,24 @@ static const ElementInfoPort c_DramSimTraceReader_ports[] = {
 		{ NULL, NULL, NULL } };
 
 
-	/*----SETUP c_USimmTraceReader STRUCTURES----*/
-	static const ElementInfoParam c_USimmTraceReader_params[] = {
-			{"numTxnGenReqQEntries", "Total entries allowed in the Req queue", NULL},
-			{"numTxnGenResQEntries", "Total entries allowed in the Res queue", NULL},
-			{"numTxnUnitReqQEntries", "Total entries in the neighbor TxnUnit's Req queue", NULL},
-			{"traceFile", "Location of trace file to read", NULL},
-			{ NULL, NULL, NULL } };
+/*----SETUP c_USimmTraceReader STRUCTURES----*/
+static const ElementInfoParam c_USimmTraceReader_params[] = {
+  {"numTxnGenReqQEntries", "Total entries allowed in the Req queue", NULL},
+  {"numTxnGenResQEntries", "Total entries allowed in the Res queue", NULL},
+  {"numTxnUnitReqQEntries", "Total entries in the neighbor TxnUnit's Req queue", NULL},
+  {"traceFile", "Location of trace file to read", NULL},
+  { NULL, NULL, NULL } };
 
-	static const char* c_USimmTraceReader_req_port_events[] = { "c_TxnReqEvent", NULL };
-	static const char* c_USimmTraceReader_res_port_events[] = { "c_TxnResEvent", NULL };
-	static const char* c_USimmTraceReader_token_port_events[] = {"c_TokenChgEvent", NULL};
+static const char* c_USimmTraceReader_req_port_events[] = { "c_TxnReqEvent", NULL };
+static const char* c_USimmTraceReader_res_port_events[] = { "c_TxnResEvent", NULL };
+static const char* c_USimmTraceReader_token_port_events[] = {"c_TokenChgEvent", NULL};
 
-	static const ElementInfoPort c_USimmTraceReader_ports[] = {
-			{ "outTxnGenReqPtr", "link to c_TxnGen for outgoing req txn", c_TxnGenRand_req_port_events },
-			{ "inTxnUnitReqQTokenChg", "link to c_TxnGen for incoming req token", c_TxnGenRand_token_port_events },
-			{ "inTxnUnitResPtr", "link to c_TxnGen for incoming res txn", c_TxnGenRand_res_port_events },
-			{ "outTxnGenResQTokenChg", "link to c_TxnGen for outgoing res token",c_TxnGenRand_token_port_events },
-			{ NULL, NULL, NULL } };
+static const ElementInfoPort c_USimmTraceReader_ports[] = {
+  { "outTxnGenReqPtr", "link to c_TxnGen for outgoing req txn", c_TxnGenRand_req_port_events },
+  { "inTxnUnitReqQTokenChg", "link to c_TxnGen for incoming req token", c_TxnGenRand_token_port_events },
+  { "inTxnUnitResPtr", "link to c_TxnGen for incoming res txn", c_TxnGenRand_res_port_events },
+  { "outTxnGenResQTokenChg", "link to c_TxnGen for outgoing res token",c_TxnGenRand_token_port_events },
+  { NULL, NULL, NULL } };
 
 
 
@@ -296,6 +320,9 @@ static const ElementInfoParam c_CmdUnit_params[] = {
 		{"numRowsPerBank" "Number of rows in every bank", NULL},
 		{"numColsPerBank", "Number of cols in every bank", NULL},
 		{"numBytesPerTransaction", "Number of bytes retrieved for every transaction", NULL},
+		{"boolPrintCmdTrace", "Print a command trace", NULL},
+		{"strCmdTraceFile", "Filename to print the command trace, or - for stdout", NULL},
+		{"strAddressMapStr", "String describing the address map", NULL},
 		{"relCommandWidth", "Relative width of each command", NULL},
 		{"boolAllocateCmdResACT", "Allocate space in CmdUnit Res Q for ACT Cmds", NULL},
 		{"boolAllocateCmdResREAD", "Allocate space in CmdUnit Res Q for READ Cmds", NULL},
@@ -387,6 +414,15 @@ static const ElementInfoPort c_Dimm_ports[] = {
 
 
 static const ElementInfoComponent CramSimComponents[] = {
+		{ "c_AddressHasher", 							// Name
+		"Hashes addresses based on config parameters",			// Description
+		NULL, 										// PrintHelp
+		create_c_AddressHasher, 						// Allocator
+		c_AddressHasher_params, 						// Parameters
+		c_AddressHasher_ports, 							// Ports
+		COMPONENT_CATEGORY_UNCATEGORIZED, 			// Category
+		NULL 										// Statistics
+		},
 		{ "c_TxnGenSeq", 							// Name
 		"Test Txn Sequential Generator",			// Description
 		NULL, 										// PrintHelp

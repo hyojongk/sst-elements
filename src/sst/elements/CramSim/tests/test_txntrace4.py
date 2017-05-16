@@ -83,7 +83,7 @@ def setup_config_params():
     else:
         l_configFile = open(g_config_file, 'r')
         for l_line in l_configFile:
-            l_tokens = l_line.split(' ')
+            l_tokens = l_line.split()
             #print l_tokens[0], ": ", l_tokens[1]
             l_params[l_tokens[0]] = l_tokens[1]
 
@@ -121,6 +121,10 @@ sst.setProgramOption("stopAtCycle", g_params["stopAtCycle"])
 
 
 # Define the simulation components
+
+# address hasher
+comp_addressHasher = sst.Component("AddrHash0", "CramSim.c_AddressHasher")
+comp_addressHasher.addParams(g_params)
 
 # txn gen
 comp_txnGen0 = setup_txn_generator(g_params)

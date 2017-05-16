@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -44,6 +44,22 @@ void Messier::parser(NVM_PARAMS * nvm, SST::Params& params)
 
 	nvm->read_weight = (uint32_t) params.find<uint32_t>("read_weight", 3) ;
 
+	nvm->max_writes = (uint32_t) params.find<uint32_t>("max_writes", 1) ;
+
+	int cache_interleave = (uint32_t) params.find<uint32_t>("cacheline_interleaving", 1) ;
+	
+	int adaptive_writes = (uint32_t) params.find<uint32_t>("adaptive_writes", 0) ;
+
+
+	if(cache_interleave==1)
+		nvm->cacheline_interleaving = true;
+
+	if(adaptive_writes==1)
+		nvm->adaptive_writes = true;
+	else
+		nvm->adaptive_writes = false;
+
+
 	// Skipe it for now
 	//	clock = D.clock; 
 
@@ -72,6 +88,7 @@ void Messier::parser(NVM_PARAMS * nvm, SST::Params& params)
 	nvm->num_banks = (uint32_t) params.find<uint32_t>("num_banks", 16);
 	nvm->row_buffer_size = (uint32_t) params.find<uint32_t>("row_buffer_size", 8192) ;
 	nvm->flush_th = (uint32_t) params.find<uint32_t>("flush_th", 50) ;
+	nvm->flush_th_low = (uint32_t) params.find<uint32_t>("flush_th_low", 30) ;
 	nvm->max_requests = (uint32_t) params.find<uint32_t>("max_requests", 32);
 
 
@@ -99,15 +116,29 @@ Messier::Messier(SST::ComponentId_t id, SST::Params& params): Component(id) {
 
 
 	// Instantiating the NVM-DIMM with the provided parameters 
-	DIMM = new NVM_DIMM(*nvm_params);
+	DIMM = new NVM_DIMM((SST::Component *) this, *nvm_params);
 
         m_memChan = configureLink(link_buffer, "1ns", new Event::Handler<NVM_DIMM>(DIMM, &NVM_DIMM::handleRequest));
 
+
+	sprintf(link_buffer, "event_bus");
+
+        event_link = configureSelfLink(link_buffer, new Event::Handler<NVM_DIMM>(DIMM, &NVM_DIMM::handleEvent));
+
+
+
 	DIMM->setMemChannel(m_memChan);
+
+	DIMM->setEventChannel(event_link);
 
 	std::cout<<"After initialization "<<std::endl;
 
 	std::string cpu_clock = params.find<std::string>("clock", "1GHz");
+
+	TimeConverter* tc = getTimeConverter(cpu_clock);
+        event_link->setDefaultTimeBase(tc);
+
+
 	registerClock( cpu_clock, new Clock::Handler<Messier>(this, &Messier::tick ) );
 
 }

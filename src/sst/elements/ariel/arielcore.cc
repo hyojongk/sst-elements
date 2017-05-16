@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -132,7 +132,7 @@ void ArielCore::commitReadEvent(const uint64_t address,
 	        pendingTransactions->insert( std::pair<SimpleMem::Request::id_t, SimpleMem::Request*>(req->id, req) );
 
 	        if(enableTracing) {
-	        	printTraceEntry(true, (const uint64_t) req->addr, (const uint32_t) length);
+	        	printTraceEntry(true, (const uint64_t) req->addrs[0], (const uint32_t) length);
 	        }
 
 	        // Actually send the event to the cache
@@ -153,7 +153,7 @@ void ArielCore::commitWriteEvent(const uint64_t address,
 	        pendingTransactions->insert( std::pair<SimpleMem::Request::id_t, SimpleMem::Request*>(req->id, req) );
 
 	        if(enableTracing) {
-	        	printTraceEntry(false, (const uint64_t) req->addr, (const uint32_t) length);
+	        	printTraceEntry(false, (const uint64_t) req->addrs[0], (const uint32_t) length);
 	        }
 
 	        // Actually send the event to the cache

@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -34,15 +34,18 @@
 #include "sst_config.h"
 
 // C++ includes
+#include <algorithm>
 #include <string>
 #include <assert.h>
 
 // CramSim includes
 #include "c_Dimm.hpp"
 #include "c_AddressHasher.hpp"
+#include "c_Transaction.hpp"
 #include "c_Bank.hpp"
 #include "c_CmdReqEvent.hpp"
 #include "c_CmdResEvent.hpp"
+#include "c_BankCommand.hpp"
 
 using namespace SST;
 using namespace SST::n_Bank;
@@ -177,11 +180,14 @@ void c_Dimm::handleInCmdUnitReqPtrEvent(SST::Event *ev) {
 
 void c_Dimm::sendToBank(c_BankCommand* x_bankCommandPtr) {
 
-	c_AddressHasher* l_hasher = c_AddressHasher::getInstance();
-	unsigned l_bankNum = l_hasher->getBankFromAddress1(
-			x_bankCommandPtr->getAddress(), m_numBanks);
-	m_banks.at(l_bankNum)->handleCommand(x_bankCommandPtr);
-
+  unsigned l_bankNum=0;
+  if(x_bankCommandPtr->getCommandMnemonic() == e_BankCommandType::REF) {
+    l_bankNum = x_bankCommandPtr->getBankId();
+  } else {
+    l_bankNum = x_bankCommandPtr->getHashedAddress()->getBankId();
+  }
+  m_banks.at(l_bankNum)->handleCommand(x_bankCommandPtr);
+  
 }
 
 void c_Dimm::sendResponse() {
@@ -189,18 +195,18 @@ void c_Dimm::sendResponse() {
 	// check if ResQ has cmds
 	if (m_cmdResQ.size() > 0) {
 
-//		std::cout << std::endl << "@" << std::dec
-//				<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
-//				<< __PRETTY_FUNCTION__ << std::endl;
-//		m_cmdResQ.front()->print();
-//		std::cout << std::endl;
+	  //std::cout << std::endl << "@" << std::dec
+	  //	    << Simulation::getSimulation()->getCurrentSimCycle() << ": "
+	  //	    << __PRETTY_FUNCTION__ << std::endl;
+	  //m_cmdResQ.front()->print();
+	  //std::cout << std::endl;
 
-		c_CmdResEvent* l_cmdResEventPtr = new c_CmdResEvent();
-		l_cmdResEventPtr->m_payload = m_cmdResQ.front();
-		m_cmdResQ.erase(
-				std::remove(m_cmdResQ.begin(), m_cmdResQ.end(),
-						m_cmdResQ.front()), m_cmdResQ.end());
-		m_outCmdUnitResPtrLink->send(l_cmdResEventPtr);
+	  c_CmdResEvent* l_cmdResEventPtr = new c_CmdResEvent();
+	  l_cmdResEventPtr->m_payload = m_cmdResQ.front();
+	  m_cmdResQ.erase(
+			  std::remove(m_cmdResQ.begin(), m_cmdResQ.end(),
+				      m_cmdResQ.front()), m_cmdResQ.end());
+	  m_outCmdUnitResPtrLink->send(l_cmdResEventPtr);
 	}
 }
 

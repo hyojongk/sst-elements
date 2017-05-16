@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -19,7 +19,6 @@
 #include <stdint.h>
 #include <queue>
 #include<iostream>
-#include<boost/tokenizer.hpp>
 #include<string>
 #include<fstream>
 
@@ -29,6 +28,8 @@
 
 //local includes
 #include "c_Transaction.hpp"
+
+typedef unsigned long ulong;
 
 using namespace std;
 
@@ -55,7 +56,7 @@ private:
 	c_TracefileReader(const c_TracefileReader&); //do not implement
 	void operator=(const c_TracefileReader&);
 
-	c_Transaction* getNextTransaction(std::string x_txnType, unsigned x_addr, unsigned x_dataWidth);
+	c_Transaction* getNextTransaction(std::string x_txnType, ulong x_addr, unsigned x_dataWidth);
 	void createTxn();
 
 	//txn to/from events

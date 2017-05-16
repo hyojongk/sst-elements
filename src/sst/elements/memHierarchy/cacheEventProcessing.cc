@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 // 
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 // 
 // Portions are copyright of other developers:
@@ -191,7 +191,7 @@ void Cache::profileEvent(MemEvent* event, Command cmd, bool replay, bool canStal
 }
 
 
-void Cache::processEvent(MemEvent* event, bool replay) {
+bool Cache::processEvent(MemEvent* event, bool replay) {
     Command cmd     = event->getCmd();
     if (cf_.L1_) event->setBaseAddr(toBaseAddr(event->getAddr()));
     Addr baseAddr   = event->getBaseAddr();
@@ -228,7 +228,7 @@ void Cache::processEvent(MemEvent* event, bool replay) {
 
     if (noncacheable || cf_.allNoncacheableRequests_) {
         processNoncacheable(event, cmd, baseAddr);
-        return;
+        return true;
     }
 
     // Cannot stall if this is a GetX to L1 and the line is locked because GetX is the unlock!
@@ -247,8 +247,13 @@ void Cache::processEvent(MemEvent* event, bool replay) {
             // Determine if request should be NACKed: Request cannot be handled immediately and there are no free MSHRs to buffer the request
             if (!replay && mshr_->isAlmostFull()) { 
                 // Requests can cause deadlock because requests and fwd requests (inv, fetch, etc) share mshrs -> always leave one mshr free for fwd requests
-                sendNACK(event);
-                break;
+                if (!cf_.L1_) {
+                    sendNACK(event);
+                    break;
+                } else if (canStall) {
+                    d_->debug(_L6_,"Stalling request...MSHR almost full\n");
+                    return false;
+                }
             }
             
             if (mshr_->isHit(baseAddr) && canStall) {
@@ -313,6 +318,7 @@ void Cache::processEvent(MemEvent* event, bool replay) {
         default:
             d_->fatal(CALL_INFO, -1, "Command not supported, cmd = %s", CommandString[cmd]);
     }
+    return true;
 }
 
 void Cache::processNoncacheable(MemEvent* event, Command cmd, Addr baseAddr) {
@@ -351,7 +357,7 @@ void Cache::processNoncacheable(MemEvent* event, Command cmd, Addr baseAddr) {
             // Flushes can be returned out of order since they don't neccessarily require a memory access so we need to actually search the MSHRs
             vector<mshrType> * entries = mshrNoncacheable_->getAll(baseAddr);
             for (vector<mshrType>::iterator it = entries->begin(); it != entries->end(); it++) {
-                MemEvent * candidate = boost::get<MemEvent*>(it->elem);
+                MemEvent * candidate = (it->elem).getEvent();
                 if (candidate->getCmd() == FlushLine || candidate->getCmd() == FlushLineInv) { // All entries are events so no checking for pointer vs event needed
                     if (candidate->getID().first == event->getResponseToID().first && candidate->getID().second == event->getResponseToID().second) {
                         origRequest = candidate;
@@ -537,7 +543,13 @@ void Cache::processIncomingEvent(SST::Event* ev) {
     if (requestsThisCycle_ == maxRequestsPerCycle_) {
         requestBuffer_.push(event);
     } else {
-        requestsThisCycle_++;
-        processEvent(event, false);
+        if ((event->getCmd() == GetS || event->getCmd() == GetX) && !requestBuffer_.empty()) {
+            requestBuffer_.push(event); // Force ordering on requests -> really only need @ L1s
+        } else {
+            requestsThisCycle_++;
+            if (!processEvent(event, false)) {
+                requestBuffer_.push(event);   
+            }
+        }
     }
 }

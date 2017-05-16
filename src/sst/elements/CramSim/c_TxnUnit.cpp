@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -136,9 +136,16 @@ c_TxnUnit::c_TxnUnit(SST::ComponentId_t x_id, SST::Params& x_params) :
 		std::cout << "nREFI value is missing ... exiting" << std::endl;
 		exit(-1);
 	}
-	m_currentREFICount = k_REFI;
 
 	// calculate total number of banks
+
+	int l_numChannelsPerDimm = (uint32_t)x_params.find<uint32_t>("numChannelsPerDimm", 1,
+			l_found);
+	if (!l_found) {
+		std::cout << "numChannelsPerDimm value is missing... exiting"
+				<< std::endl;
+		exit(-1);
+	}
 
 	int l_numRanksPerChannel = (uint32_t)x_params.find<uint32_t>("numRanksPerChannel", 100,
 			l_found);
@@ -166,6 +173,29 @@ c_TxnUnit::c_TxnUnit(SST::ComponentId_t x_id, SST::Params& x_params) :
 
 	m_numBanks = l_numRanksPerChannel * l_numBankGroupsPerRank
 			* l_numBanksPerBankGroup;
+
+	// refresh stuff
+	// populate the m_refreshGroups with bankIds
+
+	//per-rank refresh groups (all-banks refresh)
+	uint l_groupId = 0;
+	uint l_bankId = 0;
+	for(uint l_chan = 0; l_chan < l_numChannelsPerDimm; l_chan++) {
+	  for(uint l_rank = 0; l_rank < l_numRanksPerChannel; l_rank++) {
+	    // every rank in a different refresh group
+	    m_refreshGroups.push_back(std::vector<unsigned>());
+	    for(uint l_bankGroup = 0; l_bankGroup < l_numBankGroupsPerRank; l_bankGroup++) {
+	      for(uint l_bank = 0; l_bank < l_numBanksPerBankGroup; l_bank++) {
+		m_refreshGroups[l_groupId].push_back(l_bankId);
+		l_bankId++;
+	      } // banks
+	    } // bankgroups
+	    l_groupId++;
+	  } // ranks
+	} // channels
+	
+	m_currentRefreshGroup=0;
+	m_currentREFICount = (int)((double)k_REFI/m_refreshGroups.size());
 
 	//load neighboring component's params
 	k_txnGenResQEntries = (uint32_t)x_params.find<uint32_t>("numTxnGenResQEntries", 100,
@@ -346,7 +376,7 @@ bool c_TxnUnit::clockTic(SST::Cycle_t) {
 				&& (m_cmdUnitReqQTokens == k_cmdUnitReqQEntries)) {
 			// refresh was started and now we have all tokens from CmdUnit CmdReqQ and the refresh list container is empty so refresh must have finished
 			// therefore now we can start another refresh cycle
-			m_currentREFICount = k_REFI;
+		        m_currentREFICount = (int)((double)k_REFI/m_refreshGroups.size());
 			m_processingRefreshCmds = false;
 		}
 	}
@@ -371,8 +401,9 @@ void c_TxnUnit::sendResponse() {
 	// - m_txnResQ.size() > 0
 	// - m_txnResQ has an element which is response-ready
 
-//	std::cout << "m_txnGenResQTokens" << m_txnGenResQTokens << std::endl;
-//	std::cout << "m_txnResQ" << m_txnResQ.size() << std::endl;
+  //std::cout << "m_txnGenResQTokens " << std::dec << m_txnGenResQTokens << std::endl;
+  //std::cout << "m_txnResQ " << std::dec << m_txnResQ.size() << std::endl;
+  //printQueues();
 
 	if ((m_txnGenResQTokens > 0) && (m_txnResQ.size() > 0)) {
 
@@ -388,11 +419,11 @@ void c_TxnUnit::sendResponse() {
 
 		if (l_txnRes != nullptr) {
 
-//			 std::cout << "@" << std::dec
-//			 		<< Simulation::getSimulation()->getCurrentSimCycle()
-//			 		<< ": " << __PRETTY_FUNCTION__ << std::endl;
-//			 l_txnRes->print();
-//			 std::cout << std::endl;
+		        //std::cout << "@" << std::dec
+			//		<< Simulation::getSimulation()->getCurrentSimCycle()
+			//		<< ": " << __PRETTY_FUNCTION__ << std::endl;
+			//l_txnRes->print();
+			//std::cout << std::endl;
 
 			c_TxnResEvent* l_txnResEvPtr = new c_TxnResEvent();
 			l_txnResEvPtr->m_payload = l_txnRes;
@@ -402,7 +433,8 @@ void c_TxnUnit::sendResponse() {
 		}
 
 	}
-}
+} // sendResponse
+
 void c_TxnUnit::createRefreshCmds() {
 //	std::cout << "@" << std::dec
 //			<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
@@ -411,7 +443,12 @@ void c_TxnUnit::createRefreshCmds() {
 	c_TransactionToCommands* l_converter =
 			c_TransactionToCommands::getInstance();
 
-	m_refreshList = l_converter->getRefreshCommands(m_numBanks);
+	cout << "Refreshing group " << m_currentRefreshGroup << endl;
+	m_refreshList = l_converter->getRefreshCommands(m_refreshGroups[m_currentRefreshGroup]);
+	m_currentRefreshGroup++;
+	if(m_currentRefreshGroup >= m_refreshGroups.size()) {
+	  m_currentRefreshGroup = 0;
+	}
 }
 
 void c_TxnUnit::sendRequest() {
@@ -441,26 +478,17 @@ void c_TxnUnit::sendRequest() {
 	}
 
 	if ((m_txnReqQ.size() > 0) && !m_processingRefreshCmds) {
-		// std::cout << "@" << std::dec
-		// 		<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
-		// 		<< __PRETTY_FUNCTION__ << std::endl;
+	        //std::cout << "@" << std::dec
+		//	  << Simulation::getSimulation()->getCurrentSimCycle() << ": "
+		//	  << __PRETTY_FUNCTION__ << std::endl;
 		c_Transaction* l_reqTxn = m_txnReqQ.front();
-		// l_reqTxn->print();
-		// std::cout << std::endl;
+		//l_reqTxn->print();
+		//std::cout << std::endl;
 
 		c_TransactionToCommands* l_converter =
 				c_TransactionToCommands::getInstance();
 		std::vector<c_BankCommand*> l_cmdPkg = l_converter->getCommands(
 				l_reqTxn, k_relCommandWidth, k_useReadA, k_useWriteA);
-
-		c_AddressHasher* l_hasher = c_AddressHasher::getInstance();
-		// derive and set command access parameters in the package
-		for (auto& l_cmdPtr : l_cmdPkg) {
-			l_cmdPtr->setRow(
-					l_hasher->getRowFromAddress(l_cmdPtr->getAddress(),
-							k_numBytesPerTransaction, k_numChannelsPerDimm,
-							k_numColsPerBank, k_numRowsPerBank, m_numBanks));
-		}
 
 		if ((l_cmdPkg.size() < m_cmdUnitReqQTokens)
 				&& ((k_txnResQEntries - m_txnResQ.size()) > 0)) {
@@ -473,10 +501,17 @@ void c_TxnUnit::sendRequest() {
 			m_txnResQ.push_back(l_reqTxn);
 			m_txnReqQ.erase(m_txnReqQ.begin());
 
-			// std::cout << "@" << std::dec
-			// 		<< Simulation::getSimulation()->getCurrentSimCycle()
-			// 		<< ": " << __PRETTY_FUNCTION__ << ": Request sent"
-			// 		<< std::endl;
+			//std::cout << "Txn unit side pkg size " << l_cmdPkg.size() << std::endl;
+			//for (auto &l_entry : l_cmdPkg) {
+			//  std::cout<<"Txn (*l_entry) = " << std::hex << l_entry << std::endl;
+			//  l_entry->print();
+			//  std::cout << std::endl;
+			//}
+			
+			//std::cout << "@" << std::dec
+			//	  << Simulation::getSimulation()->getCurrentSimCycle()
+			//	  << ": " << __PRETTY_FUNCTION__ << ": Request sent"
+			//	  << std::endl;
 		} else {
 			for (int l_i = 0; l_i != l_cmdPkg.size(); ++l_i)
 				delete l_cmdPkg[l_i];
@@ -516,12 +551,11 @@ void c_TxnUnit::handleInTxnGenReqPtrEvent(SST::Event *ev) {
 
 	c_TxnReqEvent* l_txnReqEventPtr = dynamic_cast<c_TxnReqEvent*>(ev);
 	if (l_txnReqEventPtr) {
-		// std::cout << std::endl << "@" << std::dec
-		// 		<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
-		// 		<< __PRETTY_FUNCTION__ << std::endl;
-		//
-		// l_txnReqEventPtr->m_payload->print();
-		// std::cout << std::endl;
+	        //std::cout << "@" << std::dec
+		//	  << Simulation::getSimulation()->getCurrentSimCycle() << ": "
+		//	  << __PRETTY_FUNCTION__ << l_txnReqEventPtr->m_payload << " ";
+		//l_txnReqEventPtr->m_payload->print();
+		//std::cout << std::endl;
 
 		m_txnReqQ.push_back(l_txnReqEventPtr->m_payload);
 		delete l_txnReqEventPtr;
@@ -595,26 +629,38 @@ void c_TxnUnit::handleInCmdUnitReqQTokenChgEvent(SST::Event *ev) {
 
 void c_TxnUnit::handleInCmdUnitResPtrEvent(SST::Event *ev) {
 
-	c_CmdResEvent* l_cmdResEventPtr = dynamic_cast<c_CmdResEvent*>(ev);
-	if (l_cmdResEventPtr) {
-		c_Transaction* l_txnRes = l_cmdResEventPtr->m_payload->getTransaction();
+  c_CmdResEvent* l_cmdResEventPtr = dynamic_cast<c_CmdResEvent*>(ev);
+  if (l_cmdResEventPtr) {
+    ulong l_resSeqNum = l_cmdResEventPtr->m_payload->getSeqNum();
+    // need to find which txn matches the command seq number in the txnResQ
+    c_Transaction* l_txnRes = nullptr;
+    for(auto l_txIter : m_txnResQ) {
+      if(l_txIter->matchesCmdSeqNum(l_resSeqNum)) {
+	l_txnRes = l_txIter;
+      }
+    }
 
-		const unsigned l_cmdsLeft = l_txnRes->getWaitingCommands() - 1;
-		l_txnRes->setWaitingCommands(l_cmdsLeft);
-		if (l_cmdsLeft == 0)
-			l_txnRes->setResponseReady();
+    if(l_txnRes == nullptr) {
+      std::cout << "Error! Couldn't find transaction to match cmdSeqnum " << l_resSeqNum << std::endl;
+      exit(-1);
+    }
 
-		// std::cout << std::endl << "@" << std::dec
-		// 		<< Simulation::getSimulation()->getCurrentSimCycle() << ": "
-		// 		<< __PRETTY_FUNCTION__ << std::endl;
-		// l_txnRes->print();
-		// std::cout << std::endl;
+    const unsigned l_cmdsLeft = l_txnRes->getWaitingCommands() - 1;
+    l_txnRes->setWaitingCommands(l_cmdsLeft);
+    if (l_cmdsLeft == 0)
+      l_txnRes->setResponseReady();
 
-		delete l_cmdResEventPtr->m_payload;
-		//delete l_cmdResEventPtr;
+    //std::cout << std::endl << "@" << std::dec
+    //      << Simulation::getSimulation()->getCurrentSimCycle() << ": "
+    //	      << __PRETTY_FUNCTION__ << std::endl;
+    //l_txnRes->print();
+    //std::cout << std::endl;
 
-	} else {
-		std::cout << __PRETTY_FUNCTION__ << "ERROR:: Bad event type!"
-				<< std::endl;
-	}
+    delete l_cmdResEventPtr->m_payload;
+    //delete l_cmdResEventPtr;
+
+  } else {
+    std::cout << __PRETTY_FUNCTION__ << "ERROR:: Bad event type!"
+	      << std::endl;
+  }
 }

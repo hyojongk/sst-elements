@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -119,6 +119,8 @@ private:
 	int m_numBanks;
 	int k_REFI;
 	int m_currentREFICount;
+        std::vector<std::vector<unsigned> > m_refreshGroups;
+        uint m_currentRefreshGroup;
 	std::queue<c_BankCommand*> m_refreshList;
 
 

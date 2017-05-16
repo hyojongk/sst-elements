@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -39,48 +39,57 @@
 #include <list>
 #include <memory>
 
+//sst includes
+#include <sst/core/serialization/serializable.h>
+
+//local includes
+
+typedef unsigned long ulong;
 
 namespace SST {
 namespace n_Bank {
-
 
 class c_BankCommand;
 
 enum class e_TransactionType { READ, WRITE };
 
-class c_Transaction
+class c_Transaction : public SST::Core::Serialization::serializable
 {
 
 private:
-  unsigned m_seqNum;
+  ulong m_seqNum;
   e_TransactionType m_txnMnemonic;
-  unsigned m_addr;
+  ulong m_addr;
   std::map<e_TransactionType,std::string> m_txnToString;
-
+  
   bool m_isResponseReady;
   unsigned m_numWaitingCommands;
   unsigned m_dataWidth;
   bool m_processed; //<! flag that is set when this transaction is split into commands
 
-  std::list<c_BankCommand*> m_cmdPtrList; //<! list of c_BankCommand shared_ptrs that compose this c_Transaction
+  //std::list<c_BankCommand*> m_cmdPtrList; //<! list of c_BankCommand shared_ptrs that compose this c_Transaction
+  std::list<ulong> m_cmdSeqNumList; //<! list of c_BankCommand Sequence numbers that compose this c_Transaction
 
 public:
 
 //  friend std::ostream& operator<< (std::ostream& x_stream, const c_Transaction& x_transaction);
 
-  c_Transaction( unsigned x_seqNum, e_TransactionType x_cmdType , unsigned x_addr , unsigned x_dataWidth );
+  c_Transaction() {} // required for ImplementSerializable
+  c_Transaction( ulong x_seqNum, e_TransactionType x_cmdType , ulong x_addr , unsigned x_dataWidth);
   ~c_Transaction();
 
   e_TransactionType getTransactionMnemonic() const;
 
-  unsigned getAddress() const;         //<! returns the address accessed by this command
+  ulong getAddress() const;         //<! returns the address accessed by this command
   std::string getTransactionString() const; //<! returns the mnemonic of command
 
   void setResponseReady(); //<! sets the flag that this transaction has received its response.
-  bool isResponseReady();  //<! sets the flag that this transaction has received its response.
+  bool isResponseReady();  //<! returns the flag that this transaction has received its response.
 
   void setWaitingCommands(const unsigned x_numWaitingCommands);
   unsigned getWaitingCommands() const;
+
+  bool matchesCmdSeqNum(ulong x_seqNum); //<! returns true if this transaction matches a command with x_seqNum
 
   void addCommandPtr(c_BankCommand* x_cmdPtr);
   unsigned getDataWidth() const;
@@ -88,6 +97,11 @@ public:
   bool isProcessed() const;
   void isProcessed(bool x_processed);
   void print() const;
+
+  void serialize_order(SST::Core::Serialization::serializer &ser) override ;
+  
+  ImplementSerializable(c_Transaction);
+  
 };
 
 } // namespace n_Bank

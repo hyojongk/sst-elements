@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -186,7 +186,11 @@ void MemController::handleEvent(SST::Event* event) {
         case GetSEx:
         case PutM:
 
+            // Handle all backing stuff first since memBackend may not provide a response for writes
+            // TODO fix so that membackend always provides a response and this happens at the return instead
+            // That way, the order of accesses to the backing should match the backend's execution order
             performRequest( ev );
+            recordResponsePayload( ev );
             notifyListeners( ev );
             memBackendConvertor_->handleMemEvent( ev );
             break;
@@ -234,6 +238,11 @@ void MemController::handleMemResponse( MemEvent* ev ) {
     Debug(_L10_,"Event info: Addr: 0x%" PRIx64 ", dst = %s, src = %s, rqstr = %s, size = %d, prefetch = %d, vAddr = 0x%" PRIx64 ", instPtr = %" PRIx64 "\n",
         ev->getBaseAddr(), ev->getDst().c_str(), ev->getSrc().c_str(), ev->getRqstr().c_str(), ev->getSize(), ev->isPrefetch(), ev->getVirtualAddress(), ev->getInstructionPointer());
 
+    if (ev->queryFlag(MemEvent::F_NORESPONSE)) {
+        delete ev;
+        return;
+    }
+    
     performResponse( ev );
 
     if ( networkLink_ ) {
@@ -242,7 +251,7 @@ void MemController::handleMemResponse( MemEvent* ev ) {
         cacheLink_->send( ev );
     }
 }
-    
+
 void MemController::init(unsigned int phase) {
     if (! networkLink_ ) {
         SST::Event *ev = NULL;
@@ -306,10 +315,11 @@ void MemController::performRequest(MemEvent* event) {
 
 void MemController::performResponse(MemEvent* event) { 
     bool noncacheable  = event->queryFlag(MemEvent::F_NONCACHEABLE);
-    Addr localAddr = noncacheable ? event->getAddr() : event->getBaseAddr();
 
-    for ( size_t i = 0 ; i < event->getSize() ; i++)
-        event->getPayload()[i] = ! backing_ ? 0 : backing_->get( localAddr + i );
+    if (payloads_.find(event->getResponseToID()) != payloads_.end()) {
+        event->setPayload(payloads_.find(event->getResponseToID())->second);
+        payloads_.erase(event->getResponseToID());
+    }
 
     if (noncacheable) event->setFlag(MemEvent::F_NONCACHEABLE);
 
@@ -324,12 +334,29 @@ void MemController::performResponse(MemEvent* event) {
     }
 }
 
+void MemController::recordResponsePayload( MemEvent * ev) {
+    if (ev->queryFlag(MemEvent::F_NORESPONSE)) return;
+
+    bool noncacheable = ev->queryFlag(MemEvent::F_NONCACHEABLE);
+    Addr localAddr = noncacheable ? ev->getAddr() : ev->getBaseAddr();
+
+    vector<uint8_t> payload;
+    if (ev->getCmd() == GetS || ev->getCmd() == GetSEx || (ev->getCmd() == GetX && !noncacheable)) {
+        payload.resize(ev->getSize(), 0);
+        if (backing_) {
+            for ( size_t i = 0 ; i < ev->getSize() ; i++)
+                payload[i] = backing_->get( localAddr + i );
+        }
+        payloads_.insert(std::make_pair(ev->getID(), payload));
+    } 
+}
+
 void MemController::processInitEvent( MemEvent* me ) {
 
     /* Push data to memory */
     if (GetX == me->getCmd()) {
         Addr addr = me->getAddr();
-        Debug(_L10_,"Memory init %s - Received GetX for %" PRIx64 " size %" PRIu64 "\n", getName().c_str(), me->getAddr(),me->getSize());
+        Debug(_L10_,"Memory init %s - Received GetX for %" PRIx64 " size %" PRIu32 "\n", getName().c_str(), me->getAddr(),me->getSize());
         if ( isRequestAddressValid(addr) && backing_ ) {
             for ( size_t i = 0 ; i < me->getSize() ; i++) {
                 backing_->set( addr + i,  me->getPayload()[i] );

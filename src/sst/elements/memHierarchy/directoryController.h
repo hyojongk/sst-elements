@@ -1,8 +1,8 @@
-// Copyright 2013-2016 Sandia Corporation. Under the terms
+// Copyright 2013-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2013-2016, Sandia Corporation
+// Copyright (c) 2013-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -63,6 +63,7 @@ class DirectoryController : public Component {
     Addr        addrRangeEnd;
     Addr        interleaveSize;
     Addr        interleaveStep;
+    Addr        memOffset; // Stack addresses if multiple DCs handle the same memory
     
     CoherenceProtocol protocol;
     

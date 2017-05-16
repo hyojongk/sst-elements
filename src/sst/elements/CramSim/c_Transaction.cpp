@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -27,19 +27,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
+
 #include "c_Transaction.hpp"
+#include "c_BankCommand.hpp"
+#include "c_AddressHasher.hpp"
 
 using namespace SST;
 using namespace SST::n_Bank;
 
-c_Transaction::c_Transaction(unsigned x_seqNum, e_TransactionType x_txnMnemonic,
-		unsigned x_addr, unsigned x_dataWidth) :
+c_Transaction::c_Transaction(ulong x_seqNum, e_TransactionType x_txnMnemonic,
+			     ulong x_addr, unsigned x_dataWidth) :
 		m_seqNum(x_seqNum), m_txnMnemonic(x_txnMnemonic), m_addr(x_addr), m_isResponseReady(
 				false), m_numWaitingCommands(0), m_dataWidth(x_dataWidth), m_processed(
 				false) {
-
+       
 	m_txnToString[e_TransactionType::READ] = "READ";
 	m_txnToString[e_TransactionType::WRITE] = "WRITE";
+
+	//std::cout << "0x" << std::hex << x_addr << std::dec << "\t";    m_hashedAddr.print();
 }
 
 void c_Transaction::setWaitingCommands(const unsigned x_numWaitingCommands) {
@@ -55,7 +61,7 @@ c_Transaction::~c_Transaction() {
 	// delete the list of commands that this transaction translates into
 }
 
-unsigned c_Transaction::getAddress() const {
+ulong c_Transaction::getAddress() const {
 	return (m_addr);
 }
 
@@ -81,8 +87,14 @@ bool c_Transaction::isResponseReady() {
 //  return (x_stream);
 //}
 
+bool c_Transaction::matchesCmdSeqNum(ulong x_seqNum) {
+  return(std::find(m_cmdSeqNumList.begin(), m_cmdSeqNumList.end(), x_seqNum)
+	 != m_cmdSeqNumList.end());
+}
+
 void c_Transaction::addCommandPtr(c_BankCommand* x_cmdPtr) {
-	m_cmdPtrList.push_back(x_cmdPtr);
+  //m_cmdPtrList.push_back(x_cmdPtr);
+  m_cmdSeqNumList.push_back(x_cmdPtr->getSeqNum());
 }
 
 unsigned c_Transaction::getDataWidth() const {
@@ -100,11 +112,28 @@ void c_Transaction::isProcessed(bool x_processed) {
 //
 // FIXME: print function should be actually be overloaded in operator<< but for some reason operator overloading does not working when creating the library, so for now we will have the print function.
 void c_Transaction::print() const {
-	std::cout << getTransactionString() << ", seqNum: " << std::dec << m_seqNum
-			<< ", address: " << std::hex << getAddress() << std::dec
-			<< ", dataWidth = " << m_dataWidth << ", m_numWaitingCommands = "
-			<< std::dec << m_numWaitingCommands << ", isProcessed = "
-			<< std::boolalpha << m_processed << ", isResponseReady = "
-			<< std::boolalpha << m_isResponseReady;
+  std::cout << this << " " << getTransactionString() << ", seqNum: " << std::dec << m_seqNum
+	    << ", address: 0x" << std::hex << getAddress() << std::dec
+	    << ", dataWidth = " << m_dataWidth << ", m_numWaitingCommands = "
+	    << std::dec << m_numWaitingCommands << ", isProcessed = "
+	    << std::boolalpha << m_processed << ", isResponseReady = "
+	    << std::boolalpha << m_isResponseReady;
 }
 
+void c_Transaction::serialize_order(SST::Core::Serialization::serializer &ser)
+{
+  ser & m_seqNum;
+  ser & m_txnMnemonic;
+  ser & m_addr;
+  ser & m_txnToString;
+    
+  ser & m_isResponseReady;
+  ser & m_numWaitingCommands;
+  ser & m_dataWidth;
+  ser & m_processed;
+
+  //std::cout << "Serializing Transaction " << this << " "; this->print();
+    
+  //ser & m_cmdPtrList;
+  ser & m_cmdSeqNumList;
+}

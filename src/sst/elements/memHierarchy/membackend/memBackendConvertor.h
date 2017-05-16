@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -45,7 +45,8 @@ class MemBackendConvertor : public SubComponent {
         uint32_t processed()    { return m_offset; }
         uint64_t id()           { return ((uint64_t)m_reqId << 32) | m_offset; }
         MemEvent* getMemEvent() { return m_event; }
-        bool isWrite()          { return (m_event->getCmd() == PutM) ? true : false; }
+        bool isWrite()          { return (m_event->getCmd() == PutM || (m_event->queryFlag(MemEvent::F_NONCACHEABLE) && m_event->getCmd() == GetX)) ? true : false; }
+        uint32_t size()         { return m_event->getSize(); }
 
         void setResponse( MemEvent* event ) { m_respEvent = event; }
         MemEvent* getResponse() { return m_respEvent; }

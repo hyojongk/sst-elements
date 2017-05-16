@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -30,9 +30,10 @@ typedef uint64_t ReqId;
 
 class MemReqEvent : public SST::Event {
   public:
-    MemReqEvent(ReqId id, Addr addr, bool isWrite, unsigned numBytes, uint32_t flags) : 
-		SST::Event(), reqId(id), addr(addr), isWrite(isWrite), numBytes(numBytes), flags(flags) 
+    MemReqEvent(ReqId id, Addr addr1, bool isWrite, unsigned numBytes, uint32_t flags) : 
+		SST::Event(), reqId(id), addr(addr1), isWrite(isWrite), numBytes(numBytes), flags(flags) 
     { 
+
 		eventID  = generateUniqueId();
 	}
 
@@ -54,7 +55,7 @@ class MemReqEvent : public SST::Event {
 	id_type eventID;
 
   public:
-    void serialize_order(SST::Core::Serialization::serializer &ser) {
+    void serialize_order(SST::Core::Serialization::serializer &ser)  override {
         Event::serialize_order(ser);
         ser & reqId;  
         ser & addr;
@@ -89,7 +90,7 @@ class MemRespEvent : public SST::Event {
 	id_type eventID;
 
   public:
-    void serialize_order(SST::Core::Serialization::serializer &ser) {
+    void serialize_order(SST::Core::Serialization::serializer &ser)  override {
         Event::serialize_order(ser);
         ser & reqId;  
         ser & flags;

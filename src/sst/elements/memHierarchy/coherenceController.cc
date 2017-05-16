@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 // 
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 // 
 // Portions are copyright of other developers:
@@ -154,10 +154,13 @@ uint64_t CoherenceController::forwardMessage(MemEvent * event, Addr baseAddr, un
     /* Create event to be forwarded */
     MemEvent* forwardEvent;
     forwardEvent = new MemEvent(*event);
+    
+    if (data == NULL) forwardEvent->setPayload(0, NULL);
+    
     forwardEvent->setSrc(parent->getName());
     forwardEvent->setDst(getDestination(baseAddr));
     forwardEvent->setSize(requestSize);
-    
+
     if (data != NULL) forwardEvent->setPayload(*data);
 
     /* Determine latency in cycles */

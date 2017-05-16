@@ -1,8 +1,8 @@
-// Copyright 2009-2016 Sandia Corporation. Under the terms
+// Copyright 2009-2017 Sandia Corporation. Under the terms
 // of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 // 
-// Copyright (c) 2009-2016, Sandia Corporation
+// Copyright (c) 2009-2017, Sandia Corporation
 // All rights reserved.
 // 
 // Portions are copyright of other developers:
@@ -13,9 +13,8 @@
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 #include <sst_config.h>
-#include "hr_router.h"
+#include "hr_router/hr_router.h"
 
-#include <sst/core/element.h>
 #include <sst/core/params.h>
 #include <sst/core/simulation.h>
 #include <sst/core/timeLord.h>
@@ -368,18 +367,27 @@ bool
 hr_router::clock_handler(Cycle_t cycle)
 {
     // If there are no events in the input queues, then we can remove
-    // ourselves from the clock queue.
+    // ourselves from the clock queue, as long as the arbitration unit
+    // says it's okay.
     if ( get_vcs_with_data() == 0 ) {
 #if VERIFY_DECLOCKING
         if ( clocking ) {
-            setRequestNotifyOnEvent(true);
-            unclocked_cycle = cycle;
-            clocking = false;
+            if ( arb->isOkayToPauseClock() ) {
+                setRequestNotifyOnEvent(true);
+                unclocked_cycle = cycle;
+                clocking = false;
+            }
         }
 #else
-        setRequestNotifyOnEvent(true);
-        unclocked_cycle = cycle;
-        return true;
+        if ( arb->isOkayToPauseClock() ) {
+            setRequestNotifyOnEvent(true);
+            unclocked_cycle = cycle;
+            return true;
+        }
+        else {
+            return false;
+        }
+    
 #endif
     }
     // Loop through all the events at the heads of the queues and call
