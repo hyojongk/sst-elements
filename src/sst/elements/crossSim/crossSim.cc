@@ -14,6 +14,7 @@
 // distribution.
 
 #include <sst_config.h>
+#include <iostream>
 #include "crossSim.h"
 
 #include <sst/core/element.h>
@@ -21,6 +22,10 @@
 #include "sst/core/event.h"
 
 #include <Python.h>
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#include <numpyconfig.h>
+#include <arrayobject.h>
+#include <assert.h>
 
 #if PY_MAJOR_VERSION != 3
 #error NEEDS PYTHON 3
@@ -29,20 +34,98 @@
 using namespace SST;
 using namespace SST::crossSim;
 
+PyObject *crossSimComponent::c_s_mod = NULL;
+
 crossSimComponent::crossSimComponent(ComponentId_t id, Params& params) :
   Component(id) 
 {
-    ///
-    /*program = Py_DecodeLocale("SST Test", NULL);
-    if (program == NULL) {
-        fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
-        exit(1);
-    }
-    Py_SetProgramName(program);   optional but recommended */
+    // python init-ing
     Py_Initialize();
-    ///
+
+    if( !Py_IsInitialized() ) {
+        printf("Unable to initialize Python interpreter.");
+    }
+    
+
+    /*PyRun_SimpleString("import math\n"
+                       "from math import \n"
+                       "print(math.__file__)\n"
+                       "print(dir(math))\n"
+                       "import cross_sim\n\n"
+                       );//"print(sys.version)\n"); */
+    
+    // load cross_sim
+    if (c_s_mod == NULL) {
+        c_s_mod = PyImport_ImportModule("cross_sim");   
+        assert(c_s_mod != NULL);
+    }
+
+    PyObject *paramFunc = PyObject_GetAttrString(c_s_mod, "Parameters");
+    assert(paramFunc != NULL);
+    assert(PyCallable_Check(paramFunc));
+
+    // make params object
+    PyObject *c_s_params = PyEval_CallObject(paramFunc, NULL);
+    assert(c_s_params != NULL);
+
+    // make core: get function
+    PyObject *makeCoreFunc = PyObject_GetAttrString(c_s_mod, "MakeCore");
+    assert(makeCoreFunc != NULL);
+    assert(PyCallable_Check(makeCoreFunc));
+
+    // build arguments
+    PyObject *args = Py_BuildValue("()");
+    assert(args);
+    PyObject *kwargs = Py_BuildValue("{s:O}", "params", c_s_params);
+    assert(kwargs);
+    
+    // construct
+    PyObject *c_s_core = PyObject_Call(makeCoreFunc, args, kwargs);
+    assert(c_s_core != NULL);
+    Py_INCREF(c_s_core);
+
+    // initialize matrix
+    PyObject *mat_args = Py_BuildValue("(((dd)(dd)))", 1.0, 2.0, 2.0, 3.0); 
+    assert(mat_args);
+    PyObject *makeMatFunc = PyObject_GetAttrString(c_s_core, "set_matrix");
+    assert(makeMatFunc != NULL);
+    assert(PyCallable_Check(makeMatFunc));
+
+    PyObject *setRet = PyObject_CallObject(makeMatFunc, mat_args);
+    assert(setRet);
+    assert(setRet == Py_None);
+    Py_DECREF(setRet);
+
+    // mvm
+    PyObject *MVMFunc = PyObject_GetAttrString(c_s_core, "run_xbar_mvm");
+    assert(MVMFunc);
+    assert(PyCallable_Check(MVMFunc));
+    PyObject *vec_args = Py_BuildValue("((dd))", 1.0, 2.0); 
+    assert(vec_args);    
+    setRet = PyObject_CallObject(MVMFunc, vec_args);
+    assert(setRet);
+
+    // print
+    PyArrayObject *np_ret = reinterpret_cast<PyArrayObject*>(setRet);
+    assert(np_ret);
+    printf("NDIM %d\n", PyArray_NDIM(np_ret));
+    PyArray_Descr *desc = PyArray_DTYPE(np_ret);
+    printf("type %c\n", desc->type);
+    printf("kind %c\n", desc->kind);
+    npy_intp *sh = PyArray_SHAPE(np_ret);
+    printf("shpe %ld\n", sh[0]);
+    for (int i = 0; i < sh[0]; ++i) {
+        float* dptr = (float*)PyArray_GETPTR1(np_ret, i);
+        std::cout << i << ": " << *dptr << std::endl;
+    }
+    assert(0);
 
 
+    // clean up
+    Py_DECREF(c_s_params);
+    Py_DECREF(args);
+    Py_DECREF(mat_args);
+    Py_DECREF(kwargs);
 
     bool found;
     
@@ -121,9 +204,11 @@ bool crossSimComponent::clockTic( Cycle_t )
 
     ///
 
+    printf("a\n");
+
     PyRun_SimpleString("import sys\n\n"
                        "print(sys.version)\n");
-    Py_Finalize();
+    printf("b\n");
     ///
 
 
@@ -165,6 +250,11 @@ bool crossSimComponent::clockTic( Cycle_t )
     return false;
 }
 
+void crossSimComponent::finish() {
+    Py_Finalize();
+    printf("fin\n");
+}    
+
 // Element Libarary / Serialization stuff
     
 
@@ -172,6 +262,7 @@ bool crossSimComponent::clockTic( Cycle_t )
 /*
   Needed temporarily because the Factory doesn't know if this is an
   SST library without it.
+*/
 
 extern "C" {
     ElementLibraryInfo crossSim_eli = {
@@ -187,5 +278,5 @@ extern "C" {
         NULL // generators,
     };
 }
- */
+
 

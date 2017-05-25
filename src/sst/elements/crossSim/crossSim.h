@@ -22,6 +22,7 @@
 #include <sst/core/sst_types.h>
 #include <sst/core/link.h>
 #include <sst/core/rng/marsaglia.h>
+#include <Python.h>
 
 namespace SST {
 namespace crossSim {
@@ -33,9 +34,7 @@ public:
     ~crossSimComponent();
 
     void setup() { }
-    void finish() {
-    	printf("Component Finished.\n");
-    }
+    void finish();
 
 private:
     crossSimComponent();  // for serialization only
@@ -45,7 +44,8 @@ private:
     void handleEvent(SST::Event *ev);
     virtual bool clockTic(SST::Cycle_t);
 
-    wchar_t *program;
+    static PyObject *c_s_mod; // cross_sim module object
+    PyObject *c_s_core;
 
     int workPerCycle;
     int commFreq;
