@@ -1,5 +1,5 @@
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -103,11 +103,11 @@ void c_Rank::updateOtherBanksNextCommandCycles(c_BankGroup* x_initBankGroupPtr,
 //			l_bankPtr->print();
 //			std::cout << std::endl;
 
-			unsigned l_time = Simulation::getSimulation()->getCurrentSimCycle();
+			SimTime_t l_time = Simulation::getSimulation()->getCurrentSimCycle();
 
 			switch (x_cmdPtr->getCommandMnemonic()) {
 			case e_BankCommandType::ACT: {
-				unsigned l_nextCycle = std::max(
+                SimTime_t l_nextCycle = std::max(
 						l_bankPtr->getNextCommandCycle(e_BankCommandType::ACT),
 						l_time + m_bankParams->at("nRRD_S"));
 				l_bankPtr->setNextCommandCycle(e_BankCommandType::ACT,
@@ -117,7 +117,7 @@ void c_Rank::updateOtherBanksNextCommandCycles(c_BankGroup* x_initBankGroupPtr,
 			case e_BankCommandType::READ:
 			case e_BankCommandType::READA: {
 				// timing for the next READ or READA command
-				unsigned l_nextCycle = std::max(
+                SimTime_t l_nextCycle = std::max(
 						std::max(
 								l_bankPtr->getNextCommandCycle(
 										e_BankCommandType::READ),
@@ -154,7 +154,7 @@ void c_Rank::updateOtherBanksNextCommandCycles(c_BankGroup* x_initBankGroupPtr,
 			case e_BankCommandType::WRITE:
 			case e_BankCommandType::WRITEA: {
 				// timing for the next READ or READA command
-				unsigned l_nextCycle = std::max(
+                SimTime_t l_nextCycle = std::max(
 						std::max(
 								l_bankPtr->getNextCommandCycle(
 										e_BankCommandType::READ),

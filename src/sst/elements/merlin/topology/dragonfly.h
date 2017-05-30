@@ -1,7 +1,7 @@
 // -*- mode: c++ -*-
 
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 // 
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -85,7 +85,7 @@ private:
     uint32_t router_to_group(uint32_t group) const;
     uint32_t port_for_router(uint32_t router) const;
     uint32_t port_for_group(uint32_t group) const;
-
+public:
     SST_ELI_REGISTER_SUBCOMPONENT(topo_dragonfly,"merlin","dragonfly","Dragonfly topology object","SST::Merlin::Topology")
     
     SST_ELI_DOCUMENT_VERSION(1,0,0)

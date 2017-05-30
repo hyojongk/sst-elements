@@ -1,5 +1,5 @@
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -63,7 +63,7 @@ public:
 			c_BankInfo* x_bankPtr);
 
 private:
-	unsigned m_timer; //<! counts down to 0. when 0, changes state to IDLE automatically. is reset to ?? at state entry.
+	SimTime_t m_timer; //<! counts down to 0. when 0, changes state to IDLE automatically. is reset to ?? at state entry.
 	c_BankCommand* m_receivedCommandPtr; //<! pointer to a received command
 	c_BankCommand* m_prevCommandPtr;
 	std::list<e_BankCommandType> m_allowedCommands;

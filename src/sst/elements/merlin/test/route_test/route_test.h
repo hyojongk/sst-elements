@@ -1,7 +1,7 @@
 // -*- mode: c++ -*-
 
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 // 
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -62,7 +62,7 @@ private:
     bool clock_handler(Cycle_t cycle);
 
     bool handle_event(int vn);
-
+public:
     SST_ELI_REGISTER_COMPONENT(route_test,"merlin","route_test","Simple NIC to test routing.",COMPONENT_CATEGORY_NETWORK)
     
     SST_ELI_DOCUMENT_VERSION(0,5,0)

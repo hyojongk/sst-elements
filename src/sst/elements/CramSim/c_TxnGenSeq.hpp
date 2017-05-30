@@ -1,5 +1,5 @@
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -69,7 +69,7 @@ private:
 
 	//Transaction info
 	uint64_t m_prevAddress;
-	uint64_t m_seqNum;
+	ulong m_seqNum;
 
 	//request-related links
 	SST::Link* m_outTxnGenReqPtrLink; //outgoing txn gen req ptr
@@ -83,6 +83,7 @@ private:
 	int k_txnGenReqQEntries;
 	int k_txnGenResQEntries;
 	double k_readWriteTxnRatio;
+        unsigned int k_randSeed;
 
 	//param for receiver
 	int k_txnUnitReqQEntries;

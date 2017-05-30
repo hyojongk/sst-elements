@@ -1,5 +1,5 @@
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -44,6 +44,18 @@ namespace SST {
 namespace n_Bank {
 
   class c_BankCommand;
+
+  // holds all the statistics pointers for the banks
+  class c_BankStatistics {
+  public:
+    Statistic<uint64_t>* s_bankACTsRecvd;
+    Statistic<uint64_t>* s_bankREADsRecvd;
+    Statistic<uint64_t>* s_bankWRITEsRecvd;
+    Statistic<uint64_t>* s_bankPREsRecvd;
+    
+    Statistic<uint64_t>* s_bankRowHits;
+    Statistic<uint64_t>* s_totalRowHits;
+  };
   
 class c_Dimm: public SST::Component {
 public:
@@ -78,7 +90,7 @@ private:
 	void printQueues();
 
 	// internal microarcitecture params
-	unsigned m_thisCycleReceivedCmds;
+	SimTime_t m_thisCycleReceivedCmds;
 
 	// params for bank structure
 	int k_numRanksPerChannel;
@@ -90,6 +102,17 @@ private:
 	std::vector<c_Bank*> m_banks;
 
 	std::vector<c_BankCommand*> m_cmdResQ;
+  
+  // Statistics
+  Statistic<uint64_t>* s_actCmdsRecvd;
+  Statistic<uint64_t>* s_readCmdsRecvd;
+  Statistic<uint64_t>* s_readACmdsRecvd;
+  Statistic<uint64_t>* s_writeCmdsRecvd;
+  Statistic<uint64_t>* s_writeACmdsRecvd;
+  Statistic<uint64_t>* s_preCmdsRecvd;
+  Statistic<uint64_t>* s_refCmdsRecvd;
+
+  std::vector<c_BankStatistics*> m_bankStatsVec;
 };
 }
 }

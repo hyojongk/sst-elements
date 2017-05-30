@@ -1,5 +1,5 @@
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -71,9 +71,9 @@ void c_BankStateWriteA::clockTic(c_BankInfo* x_bank) {
 		--m_timerEnter;
 	} else {
 		if (0 == m_timerExit) {
-			unsigned l_time = Simulation::getSimulation()->getCurrentSimCycle();
+			SimTime_t l_time = Simulation::getSimulation()->getCurrentSimCycle();
 			x_bank->setLastCommandCycle(e_BankCommandType::WRITEA, l_time);
-			unsigned l_nextCycle = std::max(
+			SimTime_t l_nextCycle = std::max(
 					x_bank->getNextCommandCycle(e_BankCommandType::ACT)
 							+ m_bankParams->at("nRAS"),
 					x_bank->getLastCommandCycle(e_BankCommandType::WRITEA)
@@ -123,7 +123,7 @@ void c_BankStateWriteA::enter(c_BankInfo* x_bank, c_BankState* x_prevState,
 		m_prevCommandPtr = nullptr;
 	}
 
-	unsigned l_time = Simulation::getSimulation()->getCurrentSimCycle();
+	SimTime_t l_time = Simulation::getSimulation()->getCurrentSimCycle();
 
 //	m_timerExit = std::max(
 //			std::max(x_bank->getNextCommandCycle(e_BankCommandType::WRITEA),

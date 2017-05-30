@@ -1,7 +1,7 @@
 // -*- mode: c++ -*-
 
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 // 
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -66,7 +66,7 @@ private:
     void handle_complete(Event* ev);
     bool receive_handler(int vn);
     bool send_handler(int vn);
-    
+public:    
     SST_ELI_REGISTER_COMPONENT(bisection_test,"merlin","bisection_test","Simple NIC to test bisection bandwidth of a network.",COMPONENT_CATEGORY_NETWORK)
     
     SST_ELI_DOCUMENT_VERSION(0,9,0)

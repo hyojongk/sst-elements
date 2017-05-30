@@ -1,5 +1,5 @@
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -174,12 +174,14 @@ std::queue<c_BankCommand*> c_TransactionToCommands::getRefreshCommands(unsigned 
 std::queue<c_BankCommand*> c_TransactionToCommands::getRefreshCommands(std::vector<unsigned> &x_refreshGroup) {
 	std::queue<c_BankCommand*> l_commandVec;
 
-	for(ulong l_bankId : x_refreshGroup) {
-	  l_commandVec.push(new c_BankCommand(m_cmdSeqNum++, e_BankCommandType::REF, 0,
-					      l_bankId)
-			    );
-	}
-	std::cout << __PRETTY_FUNCTION__ << " m_cmdSeqNum = "<<m_cmdSeqNum<<std::endl;
+	//	for(ulong l_bankId : x_refreshGroup) {
+	//  l_commandVec.push(new c_BankCommand(m_cmdSeqNum++, e_BankCommandType::REF, 0,
+	//				      l_bankId)
+	//		    );
+	//}
+	l_commandVec.push(new c_BankCommand(m_cmdSeqNum++, e_BankCommandType::REF, 0,
+					    x_refreshGroup));
+	//std::cout << __PRETTY_FUNCTION__ << " m_cmdSeqNum = "<<m_cmdSeqNum<<std::endl;
 
 	return l_commandVec;
 }

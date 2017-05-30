@@ -1,5 +1,5 @@
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -44,7 +44,7 @@ public:
   friend class c_AddressHasher;
   
   unsigned getChannel()   const {return m_channel;}
-  unsigned getRank()      const {return m_row;}
+  unsigned getRank()      const {return m_rank;}
   unsigned getBankGroup() const {return m_bankgroup;}
   unsigned getBank()      const {return m_bank;}
   unsigned getRow()       const {return m_row;}

@@ -1,7 +1,7 @@
 // -*- mode: c++ -*-
 
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 // 
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -73,7 +73,7 @@ public:
 private:
     bool clock_handler(Cycle_t cycle);
 
-
+public:
     SST_ELI_REGISTER_COMPONENT(nic,"merlin","test_nic","Simple NIC to test base functionality.",COMPONENT_CATEGORY_NETWORK)
     
     SST_ELI_DOCUMENT_VERSION(1,0,0)

@@ -1,7 +1,7 @@
 // -*- mode: c++ -*-
 
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -105,7 +105,7 @@ private:
     void parseDimString(const std::string &shape, int *output) const;
     int get_dest_router(int dest_id) const;
     int get_dest_local_port(int dest_id) const;
-
+public:
     SST_ELI_REGISTER_SUBCOMPONENT(topo_torus,"merlin","torus","Multi-dimensional torus topology object","SST::Merlin::Topology")
     
     SST_ELI_DOCUMENT_VERSION(1,0,0)

@@ -1,5 +1,5 @@
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -183,7 +183,7 @@ public:
 private:
 
     bool handle_event(int vn);
-    
+public:    
     SST_ELI_REGISTER_SUBCOMPONENT(ReorderLinkControl,"merlin","reorderlinkcontrol","Link Control module that can handle out of order packet arrival.  "
       "Events are sequenced and order is reconstructed on receive.","SST::Interfaces::SimpleNetwork")
     

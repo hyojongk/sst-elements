@@ -1,5 +1,5 @@
 // Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-AC04-94AL85000 with Sandia Corporation, the U.S.
+// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
 // Government retains certain rights in this software.
 //
 // Copyright (c) 2009-2017, Sandia Corporation
@@ -66,7 +66,7 @@ void c_BankStateWrite::handleCommand(c_BankInfo* x_bank,
 	if (nullptr == m_receivedCommandPtr) {
 		m_receivedCommandPtr = x_bankCommandPtr;
 
-		unsigned l_time = Simulation::getSimulation()->getCurrentSimCycle();
+		SimTime_t l_time = Simulation::getSimulation()->getCurrentSimCycle();
 
 		m_nextStatePtr = nullptr;
 		switch (m_receivedCommandPtr->getCommandMnemonic()) {
@@ -113,7 +113,7 @@ void c_BankStateWrite::clockTic(c_BankInfo* x_bank) {
 //	std::cout << "m_timer = " << m_timer << ", m_timerExit = " << m_timerExit
 //			<< std::endl;
 
-	unsigned l_time = Simulation::getSimulation()->getCurrentSimCycle();
+	SimTime_t l_time = Simulation::getSimulation()->getCurrentSimCycle();
 
 	if (0 < m_timer) {
 		--m_timer;
@@ -237,7 +237,7 @@ void c_BankStateWrite::enter(c_BankInfo* x_bank, c_BankState* x_prevState,
 
 	m_receivedCommandPtr = nullptr;
 
-	unsigned l_time = Simulation::getSimulation()->getCurrentSimCycle();
+	SimTime_t l_time = Simulation::getSimulation()->getCurrentSimCycle();
 
 // FIXME: add condition for modeling closed row or open row
 //
