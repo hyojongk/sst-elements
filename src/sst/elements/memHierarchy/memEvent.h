@@ -61,12 +61,12 @@ using namespace std;
     X(FetchResp,    NULLCMD,        Response,   Data,           0, 0)   /* response to a Fetch, FetchInv or FetchInvX request */\
     X(FetchXResp,   NULLCMD,        Response,   Data,           0, 0)   /* response to a FetchInvX request - indicates a shared copy of the line was kept */\
     /* HTM Commands */\
-    X(BeginTx,      NULLCMD,        Request,    Request)          /*  */\
-    X(EndTx,        NULLCMD,        Request,    Request)          /*  */\
-    X(AbortTx,      NULLCMD,        Request,    Request)          /*  */\
-    X(HTMResp,      NULLCMD,        Request,    Request)          /*  */\
-    X(CommitResp,   NULLCMD,        Response,   Ack)       /* response for a successful transactional event */\
-    X(AbortResp,    NULLCMD,        Response,   Ack)        /* response for an unsuccessful transactional event */\
+    X(BeginTx,      NULLCMD,        Request,    Request,        0, 0)   /*  */\
+    X(EndTx,        NULLCMD,        Request,    Request,        0, 0)   /*  */\
+    X(AbortTx,      NULLCMD,        Request,    Request,        0, 0)   /*  */\
+    X(HTMResp,      NULLCMD,        Request,    Request,        0, 0)   /*  */\
+    X(CommitResp,   NULLCMD,        Response,   Ack,            0, 0)   /* response for a successful transactional event */\
+    X(AbortResp,    NULLCMD,        Response,   Ack,            0, 0)   /* response for an unsuccessful transactional event */\
     /* Others */\
     X(NACK,         NULLCMD,        Response,   Ack,            0, 0)   /* NACK response to a message */\
     X(AckInv,       NULLCMD,        Response,   Ack,            0, 0)   /* Acknowledgement response to an invalidation request */\

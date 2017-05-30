@@ -768,7 +768,7 @@ static const ElementInfoStatistic htm_statistics[] = {
  *  Purpose: Connects one or more upper level components to one or more lower level components
  *  over a bus-like interface
  *****************************************************************************************/
->>>>>>> devel
+
 static Component* create_Bus(ComponentId_t id, Params& params)
 {
     return new Bus( id, params );
