@@ -61,10 +61,10 @@ using namespace std;
     X(FetchResp,    NULLCMD,        Response,   Data,           0, 0)   /* response to a Fetch, FetchInv or FetchInvX request */\
     X(FetchXResp,   NULLCMD,        Response,   Data,           0, 0)   /* response to a FetchInvX request - indicates a shared copy of the line was kept */\
     /* HTM Commands */\
-    X(BeginTx,      NULLCMD,        Request,    Request,        0, 0)   /*  */\
-    X(EndTx,        NULLCMD,        Request,    Request,        0, 0)   /*  */\
-    X(AbortTx,      NULLCMD,        Request,    Request,        0, 0)   /*  */\
-    X(HTMResp,      NULLCMD,        Request,    Request,        0, 0)   /*  */\
+    X(BeginTx,      HTMResp,        Request,    Request,        0, 0)   /*  */\
+    X(EndTx,        CommitResp,     Request,    Request,        0, 0)   /*  */\
+    X(AbortTx,      AbortResp,      Request,    Request,        0, 0)   /*  */\
+    X(HTMResp,      NULLCMD,        Request,    Ack,            0, 0)   /*  */\
     X(CommitResp,   NULLCMD,        Response,   Ack,            0, 0)   /* response for a successful transactional event */\
     X(AbortResp,    NULLCMD,        Response,   Ack,            0, 0)   /* response for an unsuccessful transactional event */\
     /* Others */\
