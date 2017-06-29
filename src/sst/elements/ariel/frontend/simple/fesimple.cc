@@ -773,7 +773,6 @@ VOID ariel_postfree_instrument(ADDRINT allocLocation) {
 }
 
 VOID InstrumentRoutine(RTN rtn, VOID* args) {
-    fprintf(stderr, "Executing instrument routine: %s\n", RTN_Name(rtn).c_str());
     if (KeepMallocStackTrace.Value() == 1) {
         fprintf(rtnNameMap, "0x%" PRIx64 ", %s\n", RTN_Address(rtn), RTN_Name(rtn).c_str());   
 
@@ -840,6 +839,7 @@ VOID InstrumentRoutine(RTN rtn, VOID* args) {
                        IARG_END);
 
         RTN_Close(rtn);
+        fprintf(stderr, "Replacement complete\n");
     } else if ((InterceptMultiLevelMemory.Value() > 0) && (
                 RTN_Name(rtn) == "free" || RTN_Name(rtn) == "_free" || RTN_Name(rtn) == "__libc_free" || RTN_Name(rtn) == "_gfortran_free")) {
 
@@ -852,6 +852,7 @@ VOID InstrumentRoutine(RTN rtn, VOID* args) {
                 IARG_END);
 
         RTN_Close(rtn);
+        fprintf(stderr, "Replacement complete\n");
     } else if (RTN_Name(rtn) == "ariel_output_stats" || RTN_Name(rtn) == "_ariel_output_stats" || RTN_Name(rtn) == "__arielfort_MOD_ariel_output_stats") {
         fprintf(stderr, "Identified routine: ariel_output_stats, replacing with Ariel equivalent..\n");
         RTN_Replace(rtn, (AFUNPTR) mapped_ariel_output_stats);
@@ -863,8 +864,6 @@ VOID InstrumentRoutine(RTN rtn, VOID* args) {
         fprintf(stderr, "Replacement complete\n");
         return;
     }
-    
-    fprintf(stderr, "\tNo instrumentation\n");
 }
 
 
