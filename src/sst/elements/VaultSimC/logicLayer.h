@@ -23,6 +23,7 @@
 #include <sst/core/statapi/stataccumulator.h>
 #include <sst/core/statapi/stathistogram.h>
 #include "vaultGlobals.h"
+#include "memReqEvent.h"
 
 using namespace std;
 
@@ -49,19 +50,22 @@ private:
   logicLayer( const logicLayer& c );
   bool clock( Cycle_t );
   // determine if we 'own' a given address
-  bool isOurs(unsigned int addr) {
+  bool isOurs(Addr addr) {
     return ((((addr >> LL_SHIFT) & LL_MASK) == llID)
 	    || (LL_MASK == 0));
   }
 
-  Output dbg;
-  memChans_t m_memChans;
-  SST::Link *toMem;
-  SST::Link *toCPU;
-  int bwlimit;
-  unsigned int LL_MASK;
-  unsigned int llID;
-  unsigned long long memOps;
+    Output dbg;
+    SST::Output* output;
+    memChans_t m_memChans;
+    SST::Link *toMem;
+    SST::Link *toCPU;
+    int bwlimit;
+    uint64_t LL_MASK;
+    uint64_t LL_SHIFT;
+    uint64_t VAULT_SHIFT;
+    unsigned int llID;
+    unsigned long long memOps;
 
     Statistic<uint64_t>*  bwUsedToCpu[2]; 
     Statistic<uint64_t>*  bwUsedToMem[2]; 

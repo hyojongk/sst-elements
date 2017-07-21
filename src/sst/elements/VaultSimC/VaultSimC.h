@@ -19,7 +19,6 @@
 
 #include <sst/core/event.h>
 #include <sst/core/component.h>
-#include <sst/elements/memHierarchy/memEvent.h>
 #include <sst/core/output.h>
 
 /* If we have a PHX library to link to, we use that. Otherwise, we use
@@ -29,6 +28,7 @@
 #include <BusPacket.h>
 #endif  /* HAVE_LIBPHX */
 
+#include "memReqEvent.h"
 #include "vaultGlobals.h"
 
 using namespace std;
@@ -53,7 +53,7 @@ public: // functions
 private: // types
     
     typedef SST::Link memChan_t;
-    typedef map<unsigned, MemHierarchy::MemEvent*> t2MEMap_t;
+    typedef map<unsigned, MemReqEvent*> t2MEMap_t;
     
 private: // functions
     
@@ -62,13 +62,13 @@ private: // functions
 #if HAVE_LIBPHX == 1
     bool clock_phx( Cycle_t );
     
-    inline PHXSim::TransactionType convertType( SST::MemHierarchy::Command type );
+    inline PHXSim::TransactionType convertType( bool write );
     
     void readData(BusPacket bp, unsigned clockcycle);
     void writeData(BusPacket bp, unsigned clockcycle);
     
     std::deque<Transaction> m_transQ;
-    t2MEMap_t transactionToMemEventMap; // maps original MemEvent to a Vault transaction ID
+    t2MEMap_t transactionToMemEventMap; // maps original MemReqEvent to a Vault transaction ID
     Vault* m_memorySystem;
 #else
     // if not have PHX Lib...
@@ -86,35 +86,25 @@ private: // functions
     int numOutstanding; //number of mem requests outstanding (non-phx)
 
     unsigned vaultID;
-    size_t getInternalAddress(MemHierarchy::Addr in) {
+    /*size_t getInternalAddress(Addr in) {
         // calculate address
         size_t lower = in & VAULT_MASK;
         size_t upper = in >> (numVaults2 + VAULT_SHIFT);
         size_t out = (upper << VAULT_SHIFT) + lower;
         return out;
-    }
+    }*/
 
     // statistics
     Statistic<uint64_t>*  memOutStat;
 };
 
 #if HAVE_LIBPHX == 1
-inline PHXSim::TransactionType VaultSimC::convertType( SST::MemHierarchy::Command type )
+inline PHXSim::TransactionType VaultSimC::convertType( bool write )
 {
-    /*  Needs to be updated with current MemHierarchy Commands/States
-    switch( type )
-      {
-      case SST::MemHierarchy::ReadReq:
-      case SST::MemHierarchy::RequestData:
-	return PHXSim::DATA_READ;
-      case SST::MemHierarchy::SupplyData:
-      case SST::MemHierarchy::WriteReq:
-	return PHXSim::DATA_WRITE;
-      default: 
-	_abort(VaultSimC,"Tried to convert unknown memEvent request type (%d) to PHXSim transaction type \n", type);
-    }
-    return (PHXSim::TransactionType)-1;
-    */
+    if (write)
+        return PHXSim::DATA_WRITE;
+    else
+        return PHXSim::DATA_READ;
 }
 #endif /* HAVE_LIBPHX */
 }

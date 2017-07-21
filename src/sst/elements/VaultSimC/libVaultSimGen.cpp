@@ -30,7 +30,7 @@ extern "C" {
 }
 
 const char *memEventList[] = {
-  "MemEvent",
+  "MemReqEvent",
   NULL
 };
 
@@ -67,7 +67,9 @@ static const ElementInfoParam logicLayer_params[] = {
   {"clock",              "Logic Layer Clock Rate."},
   {"llID",               "Logic Layer ID (Unique id within chain)"},
   {"bwlimit",            "Number of memory events which can be processed per cycle per link."},
-  {"LL_MASK",            "Bitmask to determine 'ownership' of an address by a cube. A cube 'owns' an address if ((((addr >> LL_SHIFT) & LL_MASK) == llID) || (LL_MASK == 0)). LL_SHIFT is set in vaultGlobals.h and is 8 by default."},
+  {"VAULT_SHIFT",        "Lowest bit indexing vaults. A vault 'owns' an address if (addr >> VAULT_SHIFT) \% numVaults == vaultID.", "7"},
+  {"LL_SHIFT",           "Shift to determine 'ownership' of an address by a cube. A cube 'owns' an address if ((((addr >> LL_SHIFT) & LL_MASK) == llID) || (LL_MASK == 0)).", "12"},
+  {"LL_MASK",            "Bitmask to determine 'ownership' of an address by a cube. A cube 'owns' an address if ((((addr >> LL_SHIFT) & LL_MASK) == llID) || (LL_MASK == 0)). "},
   {"terminal",           "Is this the last cube in the chain?"},
   {"vaults",             "Number of vaults per cube."},
   {"debug",              "0 (default): No debugging, 1: STDOUT, 2: STDERR, 3: FILE."},
